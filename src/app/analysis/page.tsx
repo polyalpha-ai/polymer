@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight, ExternalLink, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import Image from "next/image";
+import UnicornStudio from "unicornstudio-react";
 import { ForecastCard } from "@/lib/forecasting/types";
 
 interface ProgressEvent {
@@ -60,6 +61,7 @@ export default function AnalysisPage() {
   const [forecast, setForecast] = useState<ForecastCard | null>(null);
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showUrlPreview, setShowUrlPreview] = useState(false);
 
   const extractPolymarketSlug = useCallback((url: string) => {
     const match = url.match(/polymarket\.com\/event\/([^/?]+)/);
@@ -223,27 +225,41 @@ export default function AnalysisPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-black text-white p-4 relative overflow-hidden">
+      {/* Unicorn Studio Background */}
+      <div className="fixed inset-0 w-full h-full z-0">
+        <UnicornStudio 
+          projectId="mgWUvXbgMGrxlSGJ7lQt" 
+          className="w-full h-full"
+        />
+      </div>
+      
+      {/* Content overlay */}
+      <div className="relative z-50 max-w-4xl mx-auto pt-24">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="mb-8 text-center"
+          className="mb-12 text-center"
         >
-          <h1 className="text-3xl md:text-4xl font-bold font-[family-name:var(--font-space)] mb-4">
-            Deep Analysis
-          </h1>
-          <p className="text-white/70 mb-2">Analyzing:</p>
-          <p className="text-white/50 text-sm break-all max-w-2xl mx-auto">{url}</p>
+          <div className="bg-black/40 backdrop-blur-sm rounded-lg p-4 max-w-4xl mx-auto">
+            <a
+              href={url || '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/90 hover:text-white text-sm break-all leading-relaxed hover:underline decoration-white/50 transition-colors"
+            >
+              {url}
+            </a>
+          </div>
         </motion.div>
 
         {/* Analysis Trail */}
-        <div className="relative mb-8">
+        <div className="relative mb-12">
           {/* Timeline Line */}
-          <div className="absolute left-8 top-0 bottom-0 w-px bg-gradient-to-b from-blue-500/30 via-purple-500/30 to-green-500/30"></div>
+          <div className="absolute left-8 top-0 bottom-0 w-px bg-gradient-to-b from-blue-500/40 via-purple-500/40 to-green-500/40"></div>
           
-          <div className="space-y-6">
+          <div className="space-y-8">
             <AnimatePresence>
               {steps.map((step, index) => (
                 <motion.div
@@ -276,14 +292,14 @@ export default function AnalysisPage() {
                   {/* Step Card */}
                   <div className="ml-16">
                     <Card className={`
-                      transition-all duration-300 cursor-pointer hover:scale-[1.02] 
+                      relative z-10 backdrop-blur-sm transition-all duration-300 cursor-pointer hover:scale-[1.02] 
                       ${step.status === 'complete' 
-                        ? 'bg-green-400/5 border-green-400/20 shadow-lg shadow-green-400/5' 
+                        ? 'bg-green-400/10 border-green-400/30 shadow-lg shadow-green-400/20' 
                         : step.status === 'running' 
-                        ? 'bg-blue-400/5 border-blue-400/20 shadow-lg shadow-blue-400/10' 
+                        ? 'bg-blue-400/10 border-blue-400/30 shadow-lg shadow-blue-400/20' 
                         : step.status === 'error'
-                        ? 'bg-red-400/5 border-red-400/20 shadow-lg shadow-red-400/5'
-                        : 'bg-white/5 border-white/10'
+                        ? 'bg-red-400/10 border-red-400/30 shadow-lg shadow-red-400/20'
+                        : 'bg-white/10 border-white/20'
                       }
                     `}>
                       <CardHeader 
@@ -376,9 +392,9 @@ export default function AnalysisPage() {
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.3, ease: "easeInOut" }}
                           >
-                            <CardContent className="pt-0 pb-4">
-                              <div className="bg-black/30 rounded-lg p-4 border border-white/5">
-                                <pre className="whitespace-pre-wrap text-white/70 text-xs leading-relaxed font-mono overflow-x-auto">
+                            <CardContent className="pt-0 pb-6">
+                              <div className="bg-black/50 rounded-lg p-6 border border-white/10">
+                                <pre className="whitespace-pre-wrap text-white/80 text-xs leading-relaxed font-mono overflow-x-auto max-h-96 overflow-y-auto">
                                   {JSON.stringify(step.details, null, 2)}
                                 </pre>
                               </div>
@@ -402,7 +418,7 @@ export default function AnalysisPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <Card className="bg-white/10 border-white/20">
+              <Card className="relative z-10 backdrop-blur-md bg-black/70 border-white/30 shadow-2xl">
                 <CardHeader>
                   <CardTitle className="text-2xl text-white mb-2">Analysis Complete</CardTitle>
                   <p className="text-white/80">{forecast.question}</p>
@@ -480,13 +496,13 @@ export default function AnalysisPage() {
               </Card>
               
               {forecast.markdownReport && (
-                <Card className="mt-6 bg-white/5 border-white/10">
+                <Card className="relative z-10 backdrop-blur-md mt-6 bg-black/70 border-white/30">
                   <CardHeader>
                     <CardTitle className="text-white">Detailed Report</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="prose prose-invert max-w-none">
-                      <div className="whitespace-pre-wrap text-white/80 text-sm leading-relaxed">
+                      <div className="whitespace-pre-wrap text-white text-sm leading-relaxed bg-black/30 rounded-lg p-4">
                         {forecast.markdownReport}
                       </div>
                     </div>
@@ -508,6 +524,9 @@ export default function AnalysisPage() {
           </div>
         )}
       </div>
+      
+      {/* Bottom fade overlay */}
+      <div className="fixed bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black via-black/50 to-transparent pointer-events-none z-40"></div>
     </div>
   );
 }

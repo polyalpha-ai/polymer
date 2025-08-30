@@ -138,9 +138,11 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
     searchSeeds: plan.searchSeeds.length,
     variables: plan.keyVariables.length,
     criteria: plan.decisionCriteria.length,
-    plan: {
-      subclaims: plan.subclaims.slice(0, 3), // Show first 3 for preview
-      searchSeeds: plan.searchSeeds.slice(0, 5), // Show first 5 for preview
+    response: {
+      subclaims: plan.subclaims,
+      searchSeeds: plan.searchSeeds,
+      keyVariables: plan.keyVariables,
+      decisionCriteria: plan.decisionCriteria
     }
   });
 
@@ -158,7 +160,11 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
     message: 'Initial evidence research completed',
     proEvidence: initialPro.length,
     conEvidence: initialCon.length,
-    urls: [...new Set([...initialPro.flatMap(p => p.urls), ...initialCon.flatMap(c => c.urls)])].slice(0, 10)
+    urls: [...new Set([...initialPro.flatMap(p => p.urls), ...initialCon.flatMap(c => c.urls)])].slice(0, 10),
+    response: {
+      proEvidence: initialPro.map(e => ({ claim: e.claim, type: e.type, polarity: e.polarity, urls: e.urls })),
+      conEvidence: initialCon.map(e => ({ claim: e.claim, type: e.type, polarity: e.polarity, urls: e.urls }))
+    }
   });
 
   // Step 6: CRITIC ANALYSIS - Identify gaps and provide feedback
@@ -181,7 +187,14 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
     missingAreas: critique.missing.length,
     followUpSearches: critique.followUpSearches.length,
     duplicationFlags: critique.duplicationFlags.length,
-    dataConcerns: critique.dataConcerns.length
+    dataConcerns: critique.dataConcerns.length,
+    response: {
+      missing: critique.missing,
+      followUpSearches: critique.followUpSearches,
+      duplicationFlags: critique.duplicationFlags,
+      dataConcerns: critique.dataConcerns,
+      correlationAdjustments: critique.correlationAdjustments
+    }
   });
 
   // Step 7: SECOND RESEARCH CYCLE - Targeted follow-up research
@@ -212,7 +225,14 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
       additionalCon: followUpResults.con.length,
       neutralEvidence: followUpResults.neutral.length,
       totalPro: finalPro.length,
-      totalCon: finalCon.length
+      totalCon: finalCon.length,
+      response: {
+        additionalProEvidence: followUpResults.pro.map(e => ({ claim: e.claim, type: e.type, polarity: e.polarity, urls: e.urls })),
+        additionalConEvidence: followUpResults.con.map(e => ({ claim: e.claim, type: e.type, polarity: e.polarity, urls: e.urls })),
+        neutralEvidence: followUpResults.neutral.map(e => ({ claim: e.claim, type: e.type, urls: e.urls })),
+        totalProEvidence: finalPro.map(e => ({ claim: e.claim, type: e.type, polarity: e.polarity, urls: e.urls })),
+        totalConEvidence: finalCon.map(e => ({ claim: e.claim, type: e.type, polarity: e.polarity, urls: e.urls }))
+      }
     });
   } else {
     console.log(`🔍 === RESEARCH CYCLE 2: Skipped (no gaps identified) ===`);
@@ -247,7 +267,20 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
     clusters: clusters.length,
     evidenceUsed: filteredEvidence?.length || allEvidence.length,
     evidenceFiltered: allEvidence.length - (filteredEvidence?.length || allEvidence.length),
-    topInfluences: influence.slice(0, 5).map(i => ({ evidenceId: i.evidenceId, logLR: i.logLR, deltaPP: i.deltaPP }))
+    topInfluences: influence.slice(0, 5).map(i => ({ evidenceId: i.evidenceId, logLR: i.logLR, deltaPP: i.deltaPP })),
+    response: {
+      pNeutral: pNeutral,
+      pAware: pAware,
+      influence: influence,
+      clusters: clusters.map(c => ({
+        clusterId: c.clusterId,
+        size: c.size,
+        rho: c.rho,
+        mEff: c.mEff,
+        meanLLR: c.meanLLR
+      })),
+      evidenceFiltered: filteredEvidence ? allEvidence.filter(e => !filteredEvidence.some(fe => fe.id === e.id)) : []
+    }
   });
 
   // Use filtered evidence for final card if available
@@ -266,7 +299,16 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
   onProgress?.('report_complete', {
     message: 'Final report generated',
     reportLength: markdown.length,
-    totalTime: ((Date.now() - t0)/1000).toFixed(1) + 's'
+    totalTime: ((Date.now() - t0)/1000).toFixed(1) + 's',
+    response: {
+      markdownReport: markdown,
+      totalTimeSeconds: (Date.now() - t0)/1000,
+      finalProbabilities: {
+        pNeutral: pNeutral,
+        pAware: pAware,
+        p0: p0
+      }
+    }
   });
 
   return makeForecastCard({
