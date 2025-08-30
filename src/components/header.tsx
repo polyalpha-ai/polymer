@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import TelegramBotModal from "@/components/telegram-bot-modal";
+import { ConnectPolymarket } from "@/components/connect-polymarket";
 
 export default function Header() {
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
@@ -32,28 +31,7 @@ export default function Header() {
             transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
             className="flex items-center gap-1"
           >
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="default"
-                    className="p-2 hover:bg-white/10 drop-shadow-md rounded-lg"
-                  >
-                    <Image
-                      src="/polymarket.png"
-                      alt="Polymarket"
-                      width={64}
-                      height={64}
-                      className="rounded"
-                    />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Connect your account</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <ConnectPolymarket />
             
             <Button
               variant="ghost"

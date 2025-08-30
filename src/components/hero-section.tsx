@@ -84,51 +84,62 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
             onSubmit={handleSubmit}
             className="space-y-4 max-w-xl mx-auto"
           >
-            <div className="relative">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    type="url"
-                    placeholder="Paste Polymarket URL..."
-                    value={url}
-                    onChange={(e) => {
-                      setUrl(e.target.value);
-                      setError("");
-                    }}
-                    className={`h-12 md:h-14 text-base px-4 md:px-6 bg-white/95 backdrop-blur-sm border-white/20 focus:bg-white focus:border-white/40 placeholder:text-neutral-500 ${
-                      error ? "border-red-500 animate-shake" : ""
-                    }`}
-                    disabled={isAnalyzing}
-                  />
-                  {error && (
-                    <motion.p
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="absolute -bottom-6 left-0 text-sm text-red-400 drop-shadow-md"
-                    >
-                      {error}
-                    </motion.p>
-                  )}
-                </div>
-                <Button
-                  type="submit"
-                  size="lg"
+            <div className="relative flex gap-2 transition-all duration-300">
+              <motion.div 
+                className="relative"
+                initial={{ width: "100%" }}
+                animate={{ width: url ? "75%" : "100%" }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+              >
+                <Input
+                  type="url"
+                  placeholder="Paste Polymarket URL..."
+                  value={url}
+                  onChange={(e) => {
+                    setUrl(e.target.value);
+                    setError("");
+                  }}
+                  className={`h-12 md:h-14 text-base px-4 md:px-6 bg-white/95 backdrop-blur-sm border-white/20 focus:bg-white focus:border-white/40 placeholder:text-neutral-500 w-full ${
+                    error ? "border-red-500 animate-shake" : ""
+                  }`}
                   disabled={isAnalyzing}
-                  className="h-12 md:h-14 px-6 md:px-8 bg-black text-white hover:bg-black/90 transition-all font-medium"
-                >
-                  {isAnalyzing ? (
-                    <span className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 animate-pulse" />
-                      Analyzing
-                    </span>
-                  ) : (
-                    <>
-                      👀  the future.
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </div>
+                />
+                {error && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="absolute -bottom-6 left-0 text-sm text-red-400 drop-shadow-md"
+                  >
+                    {error}
+                  </motion.p>
+                )}
+              </motion.div>
+              
+              <AnimatePresence>
+                {url && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8, width: 0 }}
+                    animate={{ opacity: 1, scale: 1, width: "15%" }}
+                    exit={{ opacity: 0, scale: 0.8, width: 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                  >
+                    <Button
+                      type="submit"
+                      size="lg"
+                      disabled={isAnalyzing}
+                      className="h-24 md:h-14 w-full bg-black text-white hover:bg-black/90 transition-all font-medium"
+                    >
+                      {isAnalyzing ? (
+                        <span className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 animate-pulse" />
+                        </span>
+                      ) : (
+                        <ArrowRight className="h-8 w-8" />
+                      )}
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             <div className="flex items-center justify-center gap-4 text-sm">

@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { OpenAICodexAnimatedBackground } from "@/components/ui/open-ai-codex-animated-background";
 import Header from "@/components/header";
+import { Providers } from "@/components/providers";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -57,9 +58,11 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${spaceGrotesk.variable} font-sans antialiased bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100`}
       >
-        <OpenAICodexAnimatedBackground />
-        <Header />
-        <main className="relative min-h-screen">{children}</main>
+        <Providers>
+          <OpenAICodexAnimatedBackground />
+          <Header />
+          <main className="relative min-h-screen">{children}</main>
+        </Providers>
       </body>
     </html>
   );
