@@ -116,8 +116,14 @@ async function conductResearch(
     // Step 1: Use tools to gather information (without structured output)
     const searchResult = await generateText({
       model,
-      system: 'You are an expert researcher. Use the available search tools to thoroughly investigate the question and gather relevant information. when searching dont add site: to the search query',
-      prompt: `${prompt}\n\nUse the search tools to find relevant information, then summarize your findings.`,
+      system: `You are an expert researcher. CRITICAL: Stay strictly on-topic for "${question}".
+- Craft search queries that are SPECIFIC to the question's subject matter
+- AVOID generic searches that could return irrelevant results
+- For political questions: include specific names, countries, political entities
+- For market questions: include specific companies, products, or financial instruments  
+- REJECT any search results about unrelated topics (medicine, safety, general studies)
+- Don't add 'site:' prefixes to queries - use natural language`,
+      prompt: `${prompt}\n\nUse the search tools to find relevant information, then summarize your findings. STAY ON TOPIC.`,
       tools: {
         valyuDeepSearch: valyuDeepSearchTool,
         valyuWebSearch: valyuWebSearchTool,
@@ -128,6 +134,11 @@ async function conductResearch(
     const evidencePrompt = `Based on your research findings, create structured evidence for the ${side} side.
 
 Research Summary: ${searchResult.text}
+
+CRITICAL REQUIREMENT: ALL evidence must be directly relevant to the question "${question}". 
+- REJECT evidence about unrelated topics (medicine, safety, general statistics)
+- ONLY include evidence specifically about the subject and context in the question
+- If your search found off-topic results, mark them as irrelevant and don't include them
 
 Now create 2-5 evidence items in JSON format matching this schema:
 {

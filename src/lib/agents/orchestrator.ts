@@ -292,7 +292,7 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
     drivers: autoDrivers
   });
   
-  const markdown = await reporterAgent(question, p0, pNeutral, pAware, influence, clusters, autoDrivers);
+  const markdown = await reporterAgent(question, p0, pNeutral, pAware, influence, clusters, autoDrivers, finalEvidence);
   console.log(`📝 Report generated. length=${markdown.length} chars`);
   console.log(`⏱️  Total pipeline time: ${((Date.now() - t0)/1000).toFixed(1)}s`);
   

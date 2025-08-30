@@ -34,12 +34,15 @@ Contradicting Evidence (${con.length} items):
 ${con.map(e => `- ${e.id}: ${e.claim} (Type ${e.type}, Verifiability: ${e.verifiability})`).join('\n')}
 
 CRITICAL ANALYSIS TASKS:
-1. Identify missing evidence types or perspectives that would strengthen the analysis
-2. Flag potential duplicates by examining originId patterns and claim similarity
-3. Note data quality concerns, selection biases, or methodological issues
-4. Suggest specific follow-up searches to fill critical gaps (max 5)
-5. Recommend correlation adjustments for evidence clusters that seem related (use originId as key, correlation value 0-1 as value)
-6. Identify factors that should reduce confidence in the final forecast
+1. **TOPIC RELEVANCE**: Flag any evidence that is off-topic or unrelated to "${question}"
+   - Medical studies, safety research, general statistics unrelated to the specific question
+   - Evidence about different people, companies, or contexts than what's being asked
+2. Identify missing evidence types or perspectives that would strengthen the analysis
+3. Flag potential duplicates by examining originId patterns and claim similarity
+4. Note data quality concerns, selection biases, or methodological issues
+5. Suggest specific follow-up searches to fill critical gaps (max 5)
+6. Recommend correlation adjustments for evidence clusters that seem related (use originId as key, correlation value 0-1 as value)
+7. Identify factors that should reduce confidence in the final forecast
 
 FOLLOW-UP SEARCH GUIDELINES:
 - Target specific gaps in evidence coverage

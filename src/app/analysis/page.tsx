@@ -10,6 +10,8 @@ import { ChevronDown, ChevronRight, ExternalLink, CheckCircle, Clock, AlertCircl
 import Image from "next/image";
 import UnicornStudio from "unicornstudio-react";
 import { ForecastCard } from "@/lib/forecasting/types";
+import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
 
 interface ProgressEvent {
   type: 'connected' | 'progress' | 'complete' | 'error';
@@ -427,14 +429,14 @@ export default function AnalysisPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <Card className="relative z-10 backdrop-blur-md bg-black/70 border-white/30 shadow-2xl">
+              <Card className="relative z-10 backdrop-blur-md bg-black/70 border-white/30 shadow-2xl overflow-hidden">
                 <CardHeader>
                   <CardTitle className="text-2xl text-white mb-2">Analysis Complete</CardTitle>
                   <p className="text-white/80">{forecast.question}</p>
                 </CardHeader>
                 
                 <CardContent>
-                  <div className="grid md:grid-cols-2 gap-6">
+                  <div className="grid md:grid-cols-2 gap-6 min-w-0">
                     <div>
                       <h3 className="text-lg font-semibold text-white mb-4">Probability Estimates</h3>
                       <div className="space-y-3">
@@ -461,12 +463,17 @@ export default function AnalysisPage() {
                       </div>
                     </div>
                     
-                    <div>
+                    <div className="min-w-0">
                       <h3 className="text-lg font-semibold text-white mb-4">Analysis Drivers</h3>
                       <div className="flex flex-wrap gap-2">
                         {forecast.drivers.map((driver, i) => (
-                          <Badge key={i} variant="outline" className="border-white/20 text-white/80">
-                            {driver}
+                          <Badge 
+                            key={i} 
+                            variant="outline" 
+                            className="border-white/20 text-white/80 text-xs leading-tight whitespace-normal break-words max-w-full"
+                            title={driver}
+                          >
+                            {driver.length > 80 ? `${driver.substring(0, 80)}...` : driver}
                           </Badge>
                         ))}
                       </div>
@@ -510,10 +517,22 @@ export default function AnalysisPage() {
                     <CardTitle className="text-white">Detailed Report</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="prose prose-invert max-w-none">
-                      <div className="whitespace-pre-wrap text-white text-sm leading-relaxed bg-black/30 rounded-lg p-4">
+                    <div className="prose prose-invert prose-sm max-w-none bg-black/30 rounded-lg p-4">
+                      <ReactMarkdown
+                        components={{
+                          h1: ({children}: {children: React.ReactNode}) => <h1 className="text-xl font-bold text-white mb-4">{children}</h1>,
+                          h2: ({children}: {children: React.ReactNode}) => <h2 className="text-lg font-semibold text-white mb-3 mt-6">{children}</h2>,
+                          h3: ({children}: {children: React.ReactNode}) => <h3 className="text-base font-medium text-white mb-2 mt-4">{children}</h3>,
+                          p: ({children}: {children: React.ReactNode}) => <p className="text-white/90 mb-3 leading-relaxed">{children}</p>,
+                          ul: ({children}: {children: React.ReactNode}) => <ul className="list-disc list-inside mb-3 space-y-1">{children}</ul>,
+                          li: ({children}: {children: React.ReactNode}) => <li className="text-white/90">{children}</li>,
+                          strong: ({children}: {children: React.ReactNode}) => <strong className="text-white font-semibold">{children}</strong>,
+                          em: ({children}: {children: React.ReactNode}) => <em className="text-white/80 italic">{children}</em>,
+                          code: ({children}: {children: React.ReactNode}) => <code className="bg-white/10 text-purple-300 px-1 py-0.5 rounded text-xs">{children}</code>,
+                        } as Components}
+                      >
                         {forecast.markdownReport}
-                      </div>
+                      </ReactMarkdown>
                     </div>
                   </CardContent>
                 </Card>

@@ -21,28 +21,25 @@ export function generateMockReport(input?: { marketShortName?: string; keyOdds?:
   const headlineProb = Math.max(1, Math.min(99, Math.round(odds)));
   const priorProb = Math.max(1, Math.min(99, Math.round(Math.max(5, Math.min(95, headlineProb - 5)))));
 
-  return [
-    `# Forecast Update: ${name}`,
-    ``,
-    `As of ${ts}, our best estimate places the probability at ~${headlineProb}% (from ~${priorProb}% baseline).`,
-    ``,
-    `## Why it moved`,
-    `- Fresh signals suggest momentum in favor of the outcome.`,
-    `- ${catalyst} improved the expected path-to-resolution.`,
-    `- No material contradictory evidence appeared in the last 24 hours.`,
-    ``,
-    `## What to watch next (1–2 weeks)`,
-    `- Official statements or filings that could confirm the current trajectory.`,
-    `- Market liquidity/price drift as participants incorporate new information.`,
-    `- Any credible counter-signal that reduces confidence in the above catalysts.`,
-    ``,
-    `## Risks`,
-    `- Over-reliance on single-source reports; surprise reversals are possible.`,
-    `- Timing uncertainty could stall the move even if the thesis remains intact.`,
-    ``,
-    `## Bottom line`,
-    `The balance of evidence currently supports the outcome at ~${headlineProb}% with upside/downside skew determined by upcoming catalysts. We will revise promptly as new, independently verified information arrives.`,
-  ].join('\n');
+  return (`Prediction: NO (10.0%)
+Why This Prediction
+Base-rate anchored: with p0 = 10.0% and no validated, high-credibility signals provided, the posterior stays near base rate.
+Market-aware check: p_aware = 8.0% supports a low-probability view consistent with the 10% estimate.
+Evidence gap: No most-influential supporting or contradicting evidence items (IDs not supplied) moved the estimate meaningfully in this cycle.
+Key Drivers
+Verified health crisis or prolonged unexplained absence of Xi (hospitalization, cancellations, sustained no-shows).
+Clear signs of elite fracture within PLA/security organs (rapid, unexplained purges/reshuffles at CMC, theater commands, MSS).
+Acute domestic crisis: sharp financial instability or nationwide unrest (property/banking failures, LGFV cascades, RMB devaluation, mass protests).
+What Would Change Our Mind
+Multi-week disappearance with corroborated hospitalization or emergency medical intervention reported by high-credibility sources (named officials or documents with verifiable provenance).
+Rapid, unexplained top-level purges/reshuffles across CMC/MSS/theater commands with credible detentions or investigations confirmed by state notices.
+Acute financial shock: systemic LGFV/default cascade, sharp RMB devaluation with capital controls, and large-scale protests documented across multiple provinces.
+Emergency Party/plenum activity with unusual state media language, removal/transfer of key titles, or authoritative leaks indicating succession planning.
+Caveats & Limitations
+Information opacity and censorship in China can delay or suppress signals, reducing timeliness and reliability.
+Limited evidence set this cycle (no citable IDs) increases reliance on priors and base rates.
+Tail risks (external conflict miscalculation, sanction shocks) are hard to model and could move probabilities abruptly.
+Time-bounded forecast: events spilling just outside 2025 are not captured, risking boundary error.`)
 }
 
 function deriveMarketNameFromReport(text?: string): string | undefined {
