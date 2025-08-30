@@ -61,7 +61,6 @@ export default function AnalysisPage() {
   const [forecast, setForecast] = useState<ForecastCard | null>(null);
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showUrlPreview, setShowUrlPreview] = useState(false);
 
   const extractPolymarketSlug = useCallback((url: string) => {
     const match = url.match(/polymarket\.com\/event\/([^/?]+)/);
@@ -158,20 +157,18 @@ export default function AnalysisPage() {
 
       setSteps(prev => {
         const existingIndex = prev.findIndex(s => s.id === event.step);
-        const newStep: AnalysisStep = {
-          id: event.step!,
-          name: stepConfig.name,
-          message: event.details?.message || event.message || stepConfig.description,
-          status: 'running',
-          details: event.details,
-          timestamp: event.timestamp,
-          expanded: false
-        };
-
+        
         if (existingIndex >= 0) {
-          // Update existing step and mark as complete
+          // Update existing step - if it has response data, mark as complete
           const updated = [...prev];
-          updated[existingIndex] = { ...updated[existingIndex], ...newStep, status: 'complete' };
+          const hasResponseData = event.details?.response || event.details?.urls || event.details?.plan;
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            message: event.details?.message || event.message || stepConfig.description,
+            details: event.details,
+            timestamp: event.timestamp,
+            status: hasResponseData ? 'complete' : 'running'
+          };
           return updated;
         } else {
           // Mark previous step as complete when starting a new one
@@ -180,6 +177,18 @@ export default function AnalysisPage() {
               ? { ...step, status: 'complete' as const }
               : step
           );
+          
+          // Add new step
+          const newStep: AnalysisStep = {
+            id: event.step!,
+            name: stepConfig.name,
+            message: event.details?.message || event.message || stepConfig.description,
+            status: 'running',
+            details: event.details,
+            timestamp: event.timestamp,
+            expanded: false
+          };
+          
           return [...updated, newStep];
         }
       });
@@ -369,7 +378,7 @@ export default function AnalysisPage() {
                               </Badge>
                             </motion.div>
                             
-                            {step.details && (
+                            {step.details && Object.keys(step.details).length > 0 && (
                               <motion.div
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
@@ -385,7 +394,7 @@ export default function AnalysisPage() {
                       </CardHeader>
                       
                       <AnimatePresence>
-                        {step.expanded && step.details && (
+                        {step.expanded && step.details && Object.keys(step.details).length > 0 && (
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
