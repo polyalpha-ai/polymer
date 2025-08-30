@@ -1,34 +1,510 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ChevronDown, ChevronRight, ExternalLink, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import Image from "next/image";
+import { ForecastCard } from "@/lib/forecasting/types";
+
+interface ProgressEvent {
+  type: 'connected' | 'progress' | 'complete' | 'error';
+  step?: string;
+  message?: string;
+  details?: any;
+  forecast?: ForecastCard;
+  error?: string;
+  timestamp?: string;
+}
+
+interface AnalysisStep {
+  id: string;
+  name: string;
+  message: string;
+  status: 'pending' | 'running' | 'complete' | 'error';
+  details?: any;
+  timestamp?: string;
+  expanded?: boolean;
+}
+
+const STEP_CONFIG: Record<string, { name: string; description: string }> = {
+  fetch_initial: { name: 'Data Collection', description: 'Fetching market data from Polymarket' },
+  initial_data: { name: 'Market Analysis', description: 'Analyzing market fundamentals' },
+  optimize_parameters: { name: 'Parameter Optimization', description: 'Optimizing analysis parameters' },
+  parameters_optimized: { name: 'Configuration Complete', description: 'Analysis configuration optimized' },
+  fetch_complete_data: { name: 'Enhanced Data Fetch', description: 'Retrieving complete dataset' },
+  complete_data_ready: { name: 'Data Processing', description: 'Processing complete market dataset' },
+  planning: { name: 'Research Planning', description: 'Planning research strategy' },
+  plan_complete: { name: 'Strategy Complete', description: 'Research strategy finalized' },
+  researching: { name: 'Evidence Research', description: 'Researching evidence from multiple sources' },
+  research_complete: { name: 'Research Complete', description: 'Evidence collection finished' },
+  criticism: { name: 'Critical Analysis', description: 'Running skeptical analysis' },
+  criticism_complete: { name: 'Criticism Complete', description: 'Critical review finished' },
+  aggregating: { name: 'Probability Analysis', description: 'Aggregating evidence and calculating probabilities' },
+  aggregation_complete: { name: 'Analysis Complete', description: 'Probability calculations finished' },
+  reporting: { name: 'Report Generation', description: 'Generating final report' },
+  report_complete: { name: 'Analysis Finished', description: 'Final report generated' }
+};
 
 export default function AnalysisPage() {
   const searchParams = useSearchParams();
   const url = searchParams.get("url");
   const [mounted, setMounted] = useState(false);
+  const [steps, setSteps] = useState<AnalysisStep[]>([]);
+  const [forecast, setForecast] = useState<ForecastCard | null>(null);
+  const [isComplete, setIsComplete] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const extractPolymarketSlug = useCallback((url: string) => {
+    const match = url.match(/polymarket\.com\/event\/([^/?]+)/);
+    return match ? match[1] : null;
+  }, []);
+
+  const toggleStepExpanded = useCallback((stepId: string) => {
+    setSteps(prev => prev.map(step => 
+      step.id === stepId ? { ...step, expanded: !step.expanded } : step
+    ));
+  }, []);
+
+  const startAnalysis = useCallback(() => {
+    if (!url) return;
+
+    const slug = extractPolymarketSlug(url);
+    if (!slug) {
+      setError('Invalid Polymarket URL');
+      return;
+    }
+
+    fetch('/api/forecast', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        polymarketSlug: slug,
+      }),
+    })
+    .then(async response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.trim() === '') continue;
+            if (line.startsWith('data: ')) {
+              try {
+                const data: ProgressEvent = JSON.parse(line.slice(6));
+                handleProgressEvent(data);
+              } catch (e) {
+                console.error('Error parsing SSE data:', e, line);
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+    })
+    .catch(err => {
+      console.error('Analysis failed:', err);
+      setError(err.message || 'Analysis failed');
+    });
+  }, [url, extractPolymarketSlug]);
+
+  const handleProgressEvent = useCallback((event: ProgressEvent) => {
+    console.log('Progress event:', event);
+
+    if (event.type === 'error') {
+      setError(event.error || 'Unknown error occurred');
+      return;
+    }
+
+    if (event.type === 'complete' && event.forecast) {
+      setForecast(event.forecast);
+      setIsComplete(true);
+      // Mark all steps as complete
+      setSteps(prev => prev.map(step => ({ ...step, status: 'complete' as const })));
+      return;
+    }
+
+    if (event.type === 'progress' && event.step) {
+      const stepConfig = STEP_CONFIG[event.step];
+      if (!stepConfig) return;
+
+      setSteps(prev => {
+        const existingIndex = prev.findIndex(s => s.id === event.step);
+        const newStep: AnalysisStep = {
+          id: event.step!,
+          name: stepConfig.name,
+          message: event.details?.message || event.message || stepConfig.description,
+          status: 'running',
+          details: event.details,
+          timestamp: event.timestamp,
+          expanded: false
+        };
+
+        if (existingIndex >= 0) {
+          // Update existing step and mark as complete
+          const updated = [...prev];
+          updated[existingIndex] = { ...updated[existingIndex], ...newStep, status: 'complete' };
+          return updated;
+        } else {
+          // Mark previous step as complete when starting a new one
+          const updated = prev.map((step, index) => 
+            index === prev.length - 1 && step.status === 'running' 
+              ? { ...step, status: 'complete' as const }
+              : step
+          );
+          return [...updated, newStep];
+        }
+      });
+    }
+  }, []);
+
+  const openPolymarketBet = useCallback(() => {
+    if (url) {
+      window.open(url, '_blank');
+    }
+  }, [url]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (mounted && url && !isComplete && steps.length === 0) {
+      startAnalysis();
+    }
+  }, [mounted, url, isComplete, steps.length, startAnalysis]);
+
   if (!mounted) return null;
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="text-center max-w-md"
+        >
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-white mb-2">Analysis Failed</h1>
+          <p className="text-red-400 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()} variant="outline">
+            Try Again
+          </Button>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 1, ease: "easeOut" }}
-        className="text-center"
-      >
-        <h1 className="text-4xl font-bold text-white font-[family-name:var(--font-space)] mb-4">
-          Deep Analysis
-        </h1>
-        <p className="text-white/70 mb-2">Analyzing:</p>
-        <p className="text-white/50 text-sm break-all max-w-md">{url}</p>
-      </motion.div>
+    <div className="min-h-screen bg-black text-white p-4">
+      <div className="max-w-4xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-8 text-center"
+        >
+          <h1 className="text-3xl md:text-4xl font-bold font-[family-name:var(--font-space)] mb-4">
+            Deep Analysis
+          </h1>
+          <p className="text-white/70 mb-2">Analyzing:</p>
+          <p className="text-white/50 text-sm break-all max-w-2xl mx-auto">{url}</p>
+        </motion.div>
+
+        {/* Analysis Trail */}
+        <div className="relative mb-8">
+          {/* Timeline Line */}
+          <div className="absolute left-8 top-0 bottom-0 w-px bg-gradient-to-b from-blue-500/30 via-purple-500/30 to-green-500/30"></div>
+          
+          <div className="space-y-6">
+            <AnimatePresence>
+              {steps.map((step, index) => (
+                <motion.div
+                  key={step.id}
+                  initial={{ opacity: 0, x: -20, scale: 0.9 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: 20, scale: 0.9 }}
+                  transition={{ 
+                    duration: 0.4, 
+                    delay: index * 0.08,
+                    ease: "easeOut"
+                  }}
+                  className="relative"
+                >
+                  {/* Timeline Dot */}
+                  <div className="absolute left-6 top-6 z-10">
+                    <div className={`
+                      w-4 h-4 rounded-full border-2 transition-all duration-300
+                      ${step.status === 'complete' 
+                        ? 'bg-green-400 border-green-400 shadow-lg shadow-green-400/30' 
+                        : step.status === 'running' 
+                        ? 'bg-blue-400 border-blue-400 shadow-lg shadow-blue-400/30 animate-pulse' 
+                        : step.status === 'error'
+                        ? 'bg-red-400 border-red-400 shadow-lg shadow-red-400/30'
+                        : 'bg-white/10 border-white/20'
+                      }
+                    `}></div>
+                  </div>
+                  
+                  {/* Step Card */}
+                  <div className="ml-16">
+                    <Card className={`
+                      transition-all duration-300 cursor-pointer hover:scale-[1.02] 
+                      ${step.status === 'complete' 
+                        ? 'bg-green-400/5 border-green-400/20 shadow-lg shadow-green-400/5' 
+                        : step.status === 'running' 
+                        ? 'bg-blue-400/5 border-blue-400/20 shadow-lg shadow-blue-400/10' 
+                        : step.status === 'error'
+                        ? 'bg-red-400/5 border-red-400/20 shadow-lg shadow-red-400/5'
+                        : 'bg-white/5 border-white/10'
+                      }
+                    `}>
+                      <CardHeader 
+                        className="pb-3" 
+                        onClick={() => toggleStepExpanded(step.id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {step.status === 'complete' && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ duration: 0.2, delay: 0.1 }}
+                              >
+                                <CheckCircle className="w-5 h-5 text-green-400" />
+                              </motion.div>
+                            )}
+                            {step.status === 'running' && (
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                              >
+                                <Clock className="w-5 h-5 text-blue-400" />
+                              </motion.div>
+                            )}
+                            {step.status === 'error' && <AlertCircle className="w-5 h-5 text-red-400" />}
+                            {step.status === 'pending' && (
+                              <div className="w-5 h-5 border-2 border-white/20 rounded-full animate-pulse"></div>
+                            )}
+                            
+                            <div>
+                              <CardTitle className="text-white text-lg font-semibold">
+                                {step.name}
+                              </CardTitle>
+                              <p className="text-white/70 text-sm mt-1 leading-relaxed">
+                                {step.message}
+                              </p>
+                              {step.timestamp && (
+                                <p className="text-white/40 text-xs mt-1">
+                                  {new Date(step.timestamp).toLocaleTimeString()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-3">
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{ duration: 0.2, delay: 0.2 }}
+                            >
+                              <Badge 
+                                variant="outline"
+                                className={`
+                                  px-3 py-1 text-xs font-medium border transition-all duration-200
+                                  ${step.status === 'complete' 
+                                    ? 'bg-green-400/10 text-green-400 border-green-400/30' 
+                                    : step.status === 'running'
+                                    ? 'bg-blue-400/10 text-blue-400 border-blue-400/30'
+                                    : step.status === 'error'
+                                    ? 'bg-red-400/10 text-red-400 border-red-400/30'
+                                    : 'bg-white/5 text-white/60 border-white/20'
+                                  }
+                                `}
+                              >
+                                {step.status === 'running' && '●'} {step.status}
+                              </Badge>
+                            </motion.div>
+                            
+                            {step.details && (
+                              <motion.div
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                              >
+                                {step.expanded ? 
+                                  <ChevronDown className="w-4 h-4 text-white/40" /> : 
+                                  <ChevronRight className="w-4 h-4 text-white/40" />
+                                }
+                              </motion.div>
+                            )}
+                          </div>
+                        </div>
+                      </CardHeader>
+                      
+                      <AnimatePresence>
+                        {step.expanded && step.details && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                          >
+                            <CardContent className="pt-0 pb-4">
+                              <div className="bg-black/30 rounded-lg p-4 border border-white/5">
+                                <pre className="whitespace-pre-wrap text-white/70 text-xs leading-relaxed font-mono overflow-x-auto">
+                                  {JSON.stringify(step.details, null, 2)}
+                                </pre>
+                              </div>
+                            </CardContent>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </Card>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Final Results */}
+        <AnimatePresence>
+          {isComplete && forecast && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="bg-white/10 border-white/20">
+                <CardHeader>
+                  <CardTitle className="text-2xl text-white mb-2">Analysis Complete</CardTitle>
+                  <p className="text-white/80">{forecast.question}</p>
+                </CardHeader>
+                
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-4">Probability Estimates</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-white/70">Neutral Analysis:</span>
+                          <Badge className="bg-blue-400/20 text-blue-400">
+                            {(forecast.pNeutral * 100).toFixed(1)}%
+                          </Badge>
+                        </div>
+                        {forecast.pAware && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-white/70">Market-Aware:</span>
+                            <Badge className="bg-purple-400/20 text-purple-400">
+                              {(forecast.pAware * 100).toFixed(1)}%
+                            </Badge>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center">
+                          <span className="text-white/70">Market Prior:</span>
+                          <Badge className="bg-gray-400/20 text-gray-400">
+                            {(forecast.p0 * 100).toFixed(1)}%
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-4">Analysis Drivers</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {forecast.drivers.map((driver, i) => (
+                          <Badge key={i} variant="outline" className="border-white/20 text-white/80">
+                            {driver}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 pt-6 border-t border-white/10">
+                    <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                      <div className="text-center sm:text-left">
+                        <p className="text-lg font-semibold text-white mb-1">
+                          Recommendation: {forecast.pNeutral > 0.5 ? 'YES' : 'NO'}
+                        </p>
+                        <p className="text-white/60 text-sm">
+                          Confidence: {(Math.abs(forecast.pNeutral - 0.5) * 200).toFixed(0)}%
+                        </p>
+                      </div>
+                      
+                      <Button 
+                        onClick={openPolymarketBet}
+                        className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
+                        size="lg"
+                      >
+                        <Image
+                          src="/polymarket.png"
+                          alt="Polymarket"
+                          width={20}
+                          height={20}
+                          className="rounded"
+                        />
+                        Place Bet
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {forecast.markdownReport && (
+                <Card className="mt-6 bg-white/5 border-white/10">
+                  <CardHeader>
+                    <CardTitle className="text-white">Detailed Report</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="prose prose-invert max-w-none">
+                      <div className="whitespace-pre-wrap text-white/80 text-sm leading-relaxed">
+                        {forecast.markdownReport}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        {!isComplete && steps.length === 0 && (
+          <div className="text-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full mx-auto mb-4"
+            />
+            <p className="text-white/60">Starting analysis...</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
