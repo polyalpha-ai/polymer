@@ -73,7 +73,7 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
             >
               In hindsight, we all would've bought Bitcoin. 
               <br className="hidden sm:block" />
-              See the future so you can profit on the next one.
+              Seer into the future, so you can retire off the next one.
             </motion.p>
           </div>
 
@@ -123,7 +123,7 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
                     </span>
                   ) : (
                     <>
-                      Analyze Now
+                      👀  the future.
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </>
                   )}

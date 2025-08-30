@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import HeroSection from "@/components/hero-section";
-import TrendingBets from "@/components/trending-bets";
+import HighestROI from "@/components/highest-roi";
 import ResultPanel from "@/components/result-panel";
 import MonetizationStrip from "@/components/monetization-strip";
 import ShareModal from "@/components/share-modal";
@@ -53,7 +53,7 @@ export default function Home() {
           />
         )}
         
-        <TrendingBets />
+        <HighestROI />
         
         <MonetizationStrip />
       </div>
