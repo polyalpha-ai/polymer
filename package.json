@@ -6,9 +6,17 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:forecast": "tsx scripts/test-forecast.ts",
+    "demo:simple": "tsx scripts/demo-simple.ts",
+    "debug:drivers": "tsx scripts/debug-drivers.ts",
+    "test:valyu": "tsx scripts/test-valyu-search.ts",
+    "test:valyu:simple": "tsx scripts/test-valyu-simple.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.23",
+    "ai": "^5.0.28",
+    "dotenv": "^16.4.5",
     "@polymarket/clob-client": "^4.21.0",
     "@polymarket/order-utils": "^2.1.0",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -43,6 +51,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
     "tailwindcss": "^4",
+    "tsx": "^4.19.0",
     "tw-animate-css": "^1.3.7",
     "typescript": "^5"
   }
