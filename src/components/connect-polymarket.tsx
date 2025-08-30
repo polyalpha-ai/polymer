@@ -14,6 +14,12 @@ export function ConnectPolymarket() {
   const chainId = useChainId()
   const { switchChain } = useSwitchChain()
   const [isInitializing, setIsInitializing] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Set mounted state after hydration
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Auto-switch to Polygon if connected to wrong network
   useEffect(() => {
@@ -43,7 +49,7 @@ export function ConnectPolymarket() {
       
     } catch (error) {
       console.error('Connection failed:', error)
-      alert(`Failed to connect wallet: ${error.message || 'Unknown error'}`)
+      alert(`Failed to connect wallet: ${(error as Error).message || 'Unknown error'}`)
     } finally {
       setIsInitializing(false)
     }
@@ -51,6 +57,35 @@ export function ConnectPolymarket() {
 
   const handleDisconnect = () => {
     disconnect()
+  }
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!isMounted) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="default"
+              className="p-2 hover:bg-white/10 drop-shadow-md rounded-lg"
+              disabled
+            >
+              <Image
+                src="/polymarket.png"
+                alt="Connect Polymarket"
+                width={64}
+                height={64}
+                className="rounded"
+              />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Loading...</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
   }
 
   return (
@@ -87,7 +122,7 @@ export function ConnectPolymarket() {
                 height={64}
                 className="rounded opacity-90"
               />
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white/20 shadow-sm"></div>
+              <div className="absolute top-0 right-0 w-4 h-4 bg-green-400 rounded-full border-2 border-white shadow-sm"></div>
             </Button>
           )}
         </TooltipTrigger>

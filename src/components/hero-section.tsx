@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
+import ZoomTransition from "@/components/zoom-transition";
 
 interface HeroSectionProps {
   onAnalyze: (url: string) => void;
@@ -15,6 +17,8 @@ interface HeroSectionProps {
 export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }: HeroSectionProps) {
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const router = useRouter();
 
   const validatePolymarketUrl = (url: string) => {
     const polymarketRegex = /^https?:\/\/(www\.)?polymarket\.com\/.+/i;
@@ -35,13 +39,22 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
       return;
     }
 
-    onAnalyze(url);
+    // Trigger zoom transition
+    setIsTransitioning(true);
+  };
+
+  const handleTransitionComplete = () => {
+    // Navigate to analysis page
+    router.push(`/analysis?url=${encodeURIComponent(url)}`);
   };
 
   const handleTrySample = () => {
     const sampleUrl = "https://polymarket.com/event/bitcoin-100k-2024";
     setUrl(sampleUrl);
-    onAnalyze(sampleUrl);
+    // Small delay to let URL populate, then trigger transition
+    setTimeout(() => {
+      setIsTransitioning(true);
+    }, 100);
   };
 
   return (
@@ -126,10 +139,10 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
                     <Button
                       type="submit"
                       size="lg"
-                      disabled={isAnalyzing}
+                      disabled={isAnalyzing || isTransitioning}
                       className="h-24 md:h-14 w-full bg-black text-white hover:bg-black/90 transition-all font-medium"
                     >
-                      {isAnalyzing ? (
+                      {isAnalyzing || isTransitioning ? (
                         <span className="flex items-center gap-2">
                           <Sparkles className="h-4 w-4 animate-pulse" />
                         </span>
@@ -162,6 +175,11 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
           </motion.form>
         </motion.div>
       </div>
+      
+      <ZoomTransition 
+        isActive={isTransitioning} 
+        onComplete={handleTransitionComplete}
+      />
     </section>
   );
 }
