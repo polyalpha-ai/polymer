@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 
 interface ZoomTransitionProps {
@@ -9,75 +9,44 @@ interface ZoomTransitionProps {
 }
 
 export default function ZoomTransition({ isActive, onComplete }: ZoomTransitionProps) {
-  const [isAnimating, setIsAnimating] = useState(false);
-  const progress = useMotionValue(0);
-
-  // Create the main zoom scale
-  const scale = useTransform(progress, [0, 1], [1, 50]);
-  const opacity = useTransform(progress, [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
-  const fadeOpacity = useTransform(progress, [0.7, 1], [0, 1]);
+  const [showAnimation, setShowAnimation] = useState(false);
 
   useEffect(() => {
-    if (isActive && !isAnimating) {
-      setIsAnimating(true);
-      
-      // Animate the progress from 0 to 1
-      const controls = animate(progress, 1, {
-        duration: 2.0,
-        ease: [0.22, 1, 0.36, 1],
-        onComplete: () => {
-          setTimeout(() => {
-            onComplete?.();
-          }, 200);
-        }
-      });
-
-      return () => controls.stop();
+    if (isActive) {
+      setShowAnimation(true);
+      // Complete after animation
+      const timer = setTimeout(() => {
+        onComplete?.();
+      }, 1000);
+      return () => clearTimeout(timer);
     }
-  }, [isActive, isAnimating, progress, onComplete]);
-
-  if (!isActive) return null;
+  }, [isActive, onComplete]);
 
   return (
-    <div className="fixed inset-0 z-[200] pointer-events-none overflow-hidden bg-black">
-      {/* Main zoom element that scales the entire viewport */}
-      <motion.div 
-        style={{ 
-          scale,
-          opacity,
-          transformOrigin: "center center"
-        }}
-        className="absolute inset-0 w-full h-full"
-      >
-        {/* Tunnel effect background */}
-        <div className="w-full h-full bg-gradient-radial from-transparent via-white/5 to-white/20" />
-        
-        {/* Speed lines radiating from center */}
-        {Array.from({ length: 30 }).map((_, i) => (
-          <div
-            key={i}
-            className="absolute top-1/2 left-1/2 origin-left bg-white/30"
-            style={{
-              width: '200vw',
-              height: '1px',
-              transform: `translate(-50%, -50%) rotate(${(360 / 30) * i}deg)`,
-            }}
+    <AnimatePresence>
+      {showAnimation && (
+        <motion.div
+          className="fixed inset-0 z-[200] bg-black flex items-center justify-center"
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ 
+            scale: [0, 1, 15], 
+            opacity: [0, 1, 1] 
+          }}
+          transition={{ 
+            duration: 1, 
+            times: [0, 0.3, 1],
+            ease: [0.22, 1, 0.36, 1] 
+          }}
+        >
+          {/* Center point */}
+          <motion.div
+            className="w-4 h-4 bg-white rounded-full"
+            initial={{ scale: 1 }}
+            animate={{ scale: [1, 0] }}
+            transition={{ duration: 0.8, delay: 0.2 }}
           />
-        ))}
-        
-        {/* Central bright point */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-          <div className="w-8 h-8 bg-white rounded-full opacity-90 shadow-[0_0_50px_rgba(255,255,255,0.8)]" />
-        </div>
-      </motion.div>
-      
-      {/* Final fade to black */}
-      <motion.div 
-        className="absolute inset-0 bg-black"
-        style={{
-          opacity: fadeOpacity
-        }}
-      />
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

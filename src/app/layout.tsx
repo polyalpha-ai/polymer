@@ -16,7 +16,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Polyseer — AI Verdicts for Polymarket (Yes or No in seconds)",
+  title: "Polyseer | See the future.",
   description: "Paste any Polymarket link and get an analyst-grade Yes/No verdict with citations. Free to start.",
   keywords: ["polymarket", "betting", "prediction markets", "AI analysis", "crypto betting"],
   authors: [{ name: "Polyseer" }],
