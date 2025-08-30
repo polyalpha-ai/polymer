@@ -43,9 +43,12 @@ CRITICAL ANALYSIS TASKS:
 
 FOLLOW-UP SEARCH GUIDELINES:
 - Target specific gaps in evidence coverage
-- Focus on high-impact, verifiable sources
+- Focus on major financial/news outlets: Reuters, Bloomberg, WSJ, Financial Times, Associated Press
+- Add temporal constraints: include "2025" or "recent" for current events
+- Avoid restrictive site: searches for government domains (whitehouse.gov, congress.gov) - they rarely yield results
+- Use broad keyword searches rather than exact phrase matching
 - Balance FOR/AGAINST perspectives
-- Prioritize Type A/B evidence over Type C/D
+- Prioritize searches likely to find Type A/B evidence over Type C/D
 
 CORRELATION ADJUSTMENTS FORMAT:
 - Use originId as key (e.g., "reuters-001", "bloomberg-002")

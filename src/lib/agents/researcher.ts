@@ -66,11 +66,30 @@ Research Process:
 2. Evaluate each piece of evidence for quality and reliability
 3. Return your findings as structured JSON matching the required schema
 
-Evidence Classification Rules:
-- Type A (2.0 cap): Primary data, official documents, direct measurements
-- Type B (1.6 cap): Secondary sources with good methodology, expert analysis  
-- Type C (0.8 cap): Tertiary sources that cite primary/secondary sources
-- Type D (0.3 cap): Weak sources, speculation, unverified claims
+ENHANCED Evidence Classification Rules:
+- Type A (2.0 cap): PRIMARY SOURCES
+  * Official documents, press releases, regulatory filings
+  * Direct quotes from named officials
+  * First-hand reporting with on-the-record sources
+  * Government data, court documents, official transcripts
+  
+- Type B (1.6 cap): HIGH-QUALITY SECONDARY SOURCES  
+  * Major news outlets with verified sourcing (Reuters, Bloomberg, WSJ, FT, AP)
+  * Expert analysis with clear methodology
+  * Academic papers, think tank reports with data
+  * Investigative journalism with multiple sources
+  
+- Type C (0.8 cap): STANDARD SECONDARY SOURCES
+  * Reputable news outlets citing primary sources
+  * Industry publications with good track records
+  * Opinion pieces by recognized experts
+  * Reports that reference primary data
+  
+- Type D (0.3 cap): WEAK OR SPECULATIVE SOURCES
+  * Unverified social media, blogs, forums
+  * Anonymous sources without corroboration
+  * Opinion pieces without supporting data
+  * Rumor, speculation, or hearsay
 
 Scoring Guidelines:
 - Verifiability: 1.0 if you can recompute/verify numbers, else estimate 0-1
@@ -199,6 +218,74 @@ export async function conductFollowUpResearch(
   return { pro, con, neutral };
 }
 
+// Helper function for automatic evidence type classification
+function classifyEvidenceType(claim: string, urls: string[], sourceDescription: string): {
+  suggestedType: 'A' | 'B' | 'C' | 'D';
+  verifiabilityBonus: number;
+  explanation: string;
+} {
+  let score = 0;
+  let explanation = '';
+  let verifiabilityBonus = 0;
+
+  // URL-based classification
+  const highQualityDomains = ['reuters.com', 'bloomberg.com', 'wsj.com', 'ft.com', 'apnews.com', 'ap.org'];
+  const officialDomains = ['.gov', 'federalreserve.gov', 'sec.gov'];
+  
+  const hasHighQualitySource = urls.some(url => highQualityDomains.some(domain => url.includes(domain)));
+  const hasOfficialSource = urls.some(url => officialDomains.some(domain => url.includes(domain)));
+  
+  if (hasOfficialSource) {
+    score += 3;
+    explanation += 'Official government source (+3). ';
+  } else if (hasHighQualitySource) {
+    score += 2;
+    explanation += 'High-quality news source (+2). ';
+  }
+
+  // Content-based classification
+  const primaryIndicators = ['official statement', 'press release', 'according to documents', 'on the record', 'regulatory filing'];
+  const secondaryIndicators = ['expert analysis', 'investigation found', 'data shows', 'study reveals'];
+  const tertiaryIndicators = ['sources say', 'reportedly', 'according to reports'];
+  const weakIndicators = ['alleged', 'rumored', 'speculation', 'unconfirmed'];
+
+  const text = claim.toLowerCase() + ' ' + sourceDescription.toLowerCase();
+  
+  if (primaryIndicators.some(indicator => text.includes(indicator))) {
+    score += 2;
+    explanation += 'Primary source indicators (+2). ';
+  } else if (secondaryIndicators.some(indicator => text.includes(indicator))) {
+    score += 1;
+    explanation += 'Secondary source indicators (+1). ';
+  } else if (tertiaryIndicators.some(indicator => text.includes(indicator))) {
+    score -= 1;
+    explanation += 'Tertiary source indicators (-1). ';
+  } else if (weakIndicators.some(indicator => text.includes(indicator))) {
+    score -= 2;
+    explanation += 'Weak source indicators (-2). ';
+  }
+
+  // Recency bonus
+  if (text.includes('2025') || text.includes('recent')) {
+    verifiabilityBonus = 0.1;
+    explanation += 'Recent publication (+0.1 verifiability). ';
+  }
+
+  // Determine type based on total score
+  let suggestedType: 'A' | 'B' | 'C' | 'D';
+  if (score >= 4) {
+    suggestedType = 'A';
+  } else if (score >= 2) {
+    suggestedType = 'B';
+  } else if (score >= 0) {
+    suggestedType = 'C';
+  } else {
+    suggestedType = 'D';
+  }
+
+  return { suggestedType, verifiabilityBonus, explanation };
+}
+
 async function conductTargetedResearch(
   question: string,
   search: { query: string; rationale: string; side: 'FOR' | 'AGAINST' | 'NEUTRAL' },
@@ -260,6 +347,15 @@ Create evidence items in JSON format matching this schema:
 }
 
 Focus on quality over quantity. Ensure each evidence item directly addresses the search rationale.
+
+AUTOMATIC CLASSIFICATION HINTS:
+- If URL contains: reuters.com, bloomberg.com, wsj.com, ft.com, ap.org → likely Type B
+- If URL contains: .gov, official press releases, regulatory filings → likely Type A  
+- If source mentions "according to documents", "official statement", "on the record" → likely Type A/B
+- If source uses words like "sources say", "reportedly", "alleged" → likely Type C/D
+- Recent publication (2025) gets +0.1 verifiability bonus
+- Multiple independent sources mentioned gets +1 corroborationsIndep
+
 Return ONLY the JSON object, no other text.`;
 
     const structuredResult = await generateText({
