@@ -93,9 +93,7 @@ export const valyuDeepSearchTool = tool({
           maxNumResults: 5,
           maxPrice: 50.0,
           relevanceThreshold: 0.5,
-          ...(searchType === "academic"
-            ? { includedSources: ["valyu/valyu-arxiv"] }
-            : {}),
+          
         }
       );
 
