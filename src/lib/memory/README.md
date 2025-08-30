@@ -32,6 +32,7 @@ The memory system provides:
 
 - **`weaviate-memory.ts`** - Core memory service implementation
 - **`README.md`** - This documentation
+ - Tools: import `memorySearchTool` and `memoryIngestTool` from `src/lib/tools/memory.ts`
 
 ## 🚀 Quick Start
 
@@ -66,6 +67,9 @@ VALYU_API_KEY=your_valyu_api_key
 # Weaviate Configuration
 WEAVIATE_URL=http://localhost:8080  # or your WCS URL
 WEAVIATE_API_KEY=your_weaviate_key  # only for WCS
+
+# Optional: auto-ingest Valyu results into memory
+MEMORY_ENABLED=true
 ```
 
 ### 3. Basic Usage
@@ -352,6 +356,17 @@ const results = await memoryService.hybridSearch("query", {
   limit: 5,
   threshold: 0.8,
   timeWindow: 12,
+});
+```
+
+### Using Tools with AI SDK
+```typescript
+import { memorySearchTool, memoryIngestTool } from '@/lib/tools/memory';
+
+const result = await generateText({
+  model: openai('gpt-4o'),
+  tools: { memorySearch: memorySearchTool, memoryIngest: memoryIngestTool },
+  prompt: 'Find prior context about AI in healthcare',
 });
 ```
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { tool } from "ai";
 import { Valyu, SearchType as ValyuSearchSDKType } from "valyu-js";
+import { memoryService } from '@/lib/memory/weaviate-memory';
 
 // Types for Valyu search results
 export interface ValyuSearchResult {
@@ -118,7 +119,15 @@ export const valyuDeepSearchTool = tool({
         results: response.results || [],
         tx_id: response.tx_id,
       };
-      
+      // Optionally ingest into memory if enabled
+      try {
+        if (process.env.MEMORY_ENABLED === 'true' && toolResult.results.length > 0) {
+          await memoryService.storeSearchResults(toolResult.results, query);
+        }
+      } catch (e) {
+        console.warn('[ValyuDeepSearchTool] Memory ingest skipped:', e instanceof Error ? e.message : e);
+      }
+
       return toolResult;
     } catch (error) {
       const errorMessage =
@@ -188,7 +197,15 @@ export const valyuWebSearchTool = tool({
         results: response.results || [],
         tx_id: response.tx_id,
       };
-      
+      // Optionally ingest into memory if enabled
+      try {
+        if (process.env.MEMORY_ENABLED === 'true' && toolResult.results.length > 0) {
+          await memoryService.storeSearchResults(toolResult.results, query);
+        }
+      } catch (e) {
+        console.warn('[ValyuWebSearchTool] Memory ingest skipped:', e instanceof Error ? e.message : e);
+      }
+
       return toolResult;
     } catch (error) {
       const errorMessage =
