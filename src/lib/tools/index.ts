@@ -9,6 +9,7 @@ import {
   semanticSimilarityTool,
   memoryOptimizationTool,
 } from './embedding_tools';
+import { polymarketBundleTool } from './polymarket';
 
 // Export all tools from a central location
 export { valyuDeepSearchTool, valyuWebSearchTool } from './valyu_search';
@@ -22,6 +23,7 @@ export {
   semanticSimilarityTool,
   memoryOptimizationTool,
 } from './embedding_tools';
+export { polymarketBundleTool } from './polymarket';
 
 // Basic tool set (original tools)
 export const valyuToolSet = {
@@ -43,6 +45,7 @@ export const valyuAdvancedToolSet = {
   embeddingConfig: embeddingConfigTool,
   semanticSimilarity: semanticSimilarityTool,
   memoryOptimization: memoryOptimizationTool,
+  polymarketBundle: polymarketBundleTool,
 } as const;
 
 // Complete tool set with all tools
