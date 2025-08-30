@@ -42,7 +42,7 @@ const EvidenceItemSchema = z.object({
 });
 
 const EvidenceSchema = z.object({
-  items: z.array(EvidenceItemSchema).min(1).max(5).describe('Array of evidence items found through research')
+  items: z.array(EvidenceItemSchema).min(0).max(5).describe('Array of evidence items found through research')
 });
 
 function makeResearchPrompt(question: string, plan: { subclaims: string[]; searchSeeds: string[] }, side: 'FOR' | 'AGAINST', marketData?: MarketData) {
@@ -97,7 +97,7 @@ async function conductResearch(
     // Step 1: Use tools to gather information (without structured output)
     const searchResult = await generateText({
       model,
-      system: 'You are an expert researcher. Use the available search tools to thoroughly investigate the question and gather relevant information.',
+      system: 'You are an expert researcher. Use the available search tools to thoroughly investigate the question and gather relevant information. when searching dont add site: to the search query',
       prompt: `${prompt}\n\nUse the search tools to find relevant information, then summarize your findings.`,
       tools: {
         valyuDeepSearch: valyuDeepSearchTool,
@@ -174,4 +174,116 @@ export async function researchBothSides(
   console.log(`✅ Research complete: ${pro.length} pro evidence, ${con.length} con evidence`);
   
   return { pro, con };
+}
+
+export async function conductFollowUpResearch(
+  question: string,
+  followUpSearches: Array<{ query: string; rationale: string; side: 'FOR' | 'AGAINST' | 'NEUTRAL' }>,
+  marketData?: MarketData
+): Promise<{ pro: Evidence[]; con: Evidence[]; neutral: Evidence[] }> {
+  console.log(`🔍 Starting follow-up research with ${followUpSearches.length} targeted searches...`);
+  
+  const results = await Promise.all(
+    followUpSearches.map(async (search) => {
+      const evidence = await conductTargetedResearch(question, search, marketData);
+      return { side: search.side, evidence };
+    })
+  );
+
+  const pro = results.filter(r => r.side === 'FOR').flatMap(r => r.evidence);
+  const con = results.filter(r => r.side === 'AGAINST').flatMap(r => r.evidence);
+  const neutral = results.filter(r => r.side === 'NEUTRAL').flatMap(r => r.evidence);
+
+  console.log(`✅ Follow-up research complete: ${pro.length} pro, ${con.length} con, ${neutral.length} neutral evidence`);
+  
+  return { pro, con, neutral };
+}
+
+async function conductTargetedResearch(
+  question: string,
+  search: { query: string; rationale: string; side: 'FOR' | 'AGAINST' | 'NEUTRAL' },
+  marketData?: MarketData
+): Promise<Evidence[]> {
+  try {
+    const marketContext = marketData ? `
+Market Context:
+- Question: ${marketData.market_facts.question}
+- Current Price: ${marketData.market_state_now[0]?.mid || 'N/A'}
+- Volume: ${marketData.market_facts.volume || 'N/A'}
+` : '';
+
+    const prompt = `You are conducting targeted research to fill a specific gap in the analysis.
+
+${marketContext}
+Original Question: ${question}
+Search Query: ${search.query}
+Rationale: ${search.rationale}
+Target Side: ${search.side}
+
+Use the search tools to find specific evidence related to this query. Focus on high-quality, verifiable sources that address the identified gap.
+
+After searching, return 1-3 high-quality evidence items that directly address the search rationale.`;
+
+    // Step 1: Use tools to gather information
+    const searchResult = await generateText({
+      model,
+      system: 'You are an expert researcher conducting targeted searches to fill specific analytical gaps.',
+      prompt: `${prompt}\n\nUse the search tools to find relevant information, then summarize your findings.`,
+      tools: {
+        valyuDeepSearch: valyuDeepSearchTool,
+        valyuWebSearch: valyuWebSearchTool,
+      },
+    });
+
+    // Step 2: Generate structured evidence based on search results
+    const evidencePrompt = `Based on your targeted research findings, create 1-3 high-quality evidence items.
+
+Research Summary: ${searchResult.text}
+Target Side: ${search.side}
+
+Create evidence items in JSON format matching this schema:
+{
+  "items": [
+    {
+      "id": "string",
+      "claim": "string", 
+      "polarity": "${search.side === 'FOR' ? '1' : '-1'}",
+      "type": "A|B|C|D",
+      "urls": ["string"] // or [] if no sources,
+      "originId": "string",
+      "firstReport": boolean,
+      "verifiability": number,
+      "corroborationsIndep": number,
+      "consistency": number
+    }
+  ]
+}
+
+Focus on quality over quantity. Ensure each evidence item directly addresses the search rationale.
+Return ONLY the JSON object, no other text.`;
+
+    const structuredResult = await generateText({
+      model,
+      system: 'You are a structured data generator. Return only valid JSON matching the exact schema provided.',
+      prompt: evidencePrompt,
+      experimental_output: Output.object({
+        schema: EvidenceSchema,
+      }),
+    });
+
+    // Access the structured output and convert polarity strings to numbers
+    if (structuredResult.experimental_output) {
+      const items = structuredResult.experimental_output.items.map((item: any) => ({
+        ...item,
+        polarity: search.side === 'NEUTRAL' ? 0 : (item.polarity === '1' ? 1 : -1) // Convert string to number, handle NEUTRAL
+      }));
+      return items as Evidence[];
+    } else {
+      console.warn(`No structured output generated for targeted research: ${search.query}`);
+      return [];
+    }
+  } catch (error) {
+    console.error(`Error in targeted research for "${search.query}":`, error);
+    return [];
+  }
 }
