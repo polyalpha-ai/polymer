@@ -35,17 +35,8 @@ export class WeaviateMemoryService {
   private isInitialized = false;
 
   constructor() {
-    const weaviateUrl = process.env.WEAVIATE_URL || 'http://localhost:8080';
-    const weaviateApiKey = process.env.WEAVIATE_API_KEY;
-
-    this.client = weaviate.client({
-      url: weaviateUrl,
-      ...(weaviateApiKey && { 
-        authClientSecret: {
-          clientSecret: weaviateApiKey,
-        },
-      }),
-    });
+    // Weaviate v3 client uses async connect helpers; client is created in initialize()
+    this.client = null;
   }
 
   /**
@@ -55,6 +46,44 @@ export class WeaviateMemoryService {
     if (this.isInitialized) return;
 
     try {
+      // Ensure client connection (Weaviate v3 connection helpers)
+      if (!this.client) {
+        const weaviateUrl = process.env.WEAVIATE_URL || '';
+        const weaviateApiKey = process.env.WEAVIATE_API_KEY;
+        const openaiKey = process.env.OPENAI_API_KEY || '';
+
+        // Prefer Cloud connection when API key and URL are provided
+        if (weaviateUrl && weaviateApiKey) {
+          this.client = await weaviate.connectToWeaviateCloud(weaviateUrl, {
+            authCredentials: new weaviate.ApiKey(weaviateApiKey),
+            headers: {
+              'X-OpenAI-Api-Key': openaiKey,
+            },
+          });
+        } else if (weaviateUrl) {
+          // Use custom connection when URL provided without auth
+          const url = new URL(weaviateUrl);
+          this.client = await weaviate.connectToCustom({
+            httpHost: url.hostname,
+            httpPort: Number(url.port || (url.protocol === 'https:' ? 443 : 80)),
+            httpSecure: url.protocol === 'https:',
+            grpcHost: url.hostname,
+            grpcPort: Number(url.port || (url.protocol === 'https:' ? 443 : 80)),
+            grpcSecure: url.protocol === 'https:',
+            headers: {
+              'X-OpenAI-Api-Key': openaiKey,
+            },
+          });
+        } else {
+          // Default to local connection (e.g. docker compose on localhost)
+          this.client = await weaviate.connectToLocal({
+            headers: {
+              'X-OpenAI-Api-Key': openaiKey,
+            },
+          });
+        }
+      }
+
       // Check if class already exists
       const exists = await this.client.collections
         .exists(this.className)
@@ -63,36 +92,20 @@ export class WeaviateMemoryService {
       if (!exists) {
         // Create the collection
         await this.client.collections.create({
-            name: this.className,
-            description: 'Memory snippets from Valyu search results with embeddings',
-            vectorizers: weaviate.configure.vectorizer.none(),
-            properties: [
-              weaviate.configure.property.text('content', {
-                description: 'The main content of the snippet',
-              }),
-              weaviate.configure.property.text('title', {
-                description: 'Title of the source document',
-              }),
-              weaviate.configure.property.text('url', {
-                description: 'URL of the source document',
-              }),
-              weaviate.configure.property.text('source', {
-                description: 'Source identifier (e.g., valyu/arxiv)',
-              }),
-              weaviate.configure.property.number('relevance_score', {
-                description: 'Original relevance score from Valyu',
-              }),
-              weaviate.configure.property.number('timestamp', {
-                description: 'Unix timestamp when stored',
-              }),
-              weaviate.configure.property.text('query_context', {
-                description: 'The original query that retrieved this result',
-              }),
-              weaviate.configure.property.object('metadata', {
-                description: 'Additional metadata from the search result',
-              }),
-            ],
-          });
+          name: this.className,
+          description: 'Memory snippets from Valyu search results with embeddings',
+          vectorizers: weaviate.configure.vectorizer.none(),
+          properties: [
+            { name: 'content', dataType: 'text', description: 'The main content of the snippet' },
+            { name: 'title', dataType: 'text', description: 'Title of the source document' },
+            { name: 'url', dataType: 'text', description: 'URL of the source document' },
+            { name: 'source', dataType: 'text', description: 'Source identifier (e.g., valyu/arxiv)' },
+            { name: 'relevance_score', dataType: 'number', description: 'Original relevance score from Valyu' },
+            { name: 'timestamp', dataType: 'number', description: 'Unix timestamp when stored' },
+            { name: 'query_context', dataType: 'text', description: 'The original query that retrieved this result' },
+            { name: 'metadata', dataType: 'object', description: 'Additional metadata from the search result' },
+          ],
+        });
 
         console.log(`Created Weaviate class: ${this.className}`);
       }
