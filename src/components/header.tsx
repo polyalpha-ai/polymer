@@ -17,7 +17,7 @@ export default function Header() {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
           >
             <Link href="/" className="flex items-center space-x-2">
               <span className="text-2xl md:text-3xl font-bold text-white font-[family-name:var(--font-space)] drop-shadow-md">
@@ -29,7 +29,7 @@ export default function Header() {
           <motion.nav
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
+            transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
             className="flex items-center gap-1"
           >
             <TooltipProvider>
@@ -43,8 +43,8 @@ export default function Header() {
                     <Image
                       src="/polymarket.png"
                       alt="Polymarket"
-                      width={48}
-                      height={48}
+                      width={64}
+                      height={64}
                       className="rounded"
                     />
                   </Button>

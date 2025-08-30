@@ -66,6 +66,8 @@ interface CarouselProps {
   items: React.ReactNode[]
   isCarouselActive: boolean
   onItemClick?: (index: number) => void
+  autoRotate?: boolean
+  isPaused?: boolean
 }
 
 const Carousel = memo(
@@ -73,18 +75,29 @@ const Carousel = memo(
     items,
     isCarouselActive,
     onItemClick,
+    autoRotate = false,
+    isPaused = false,
   }: CarouselProps) => {
     const isScreenSizeSm = useMediaQuery("(max-width: 640px)")
     const controls = useAnimation()
-    const cylinderWidth = isScreenSizeSm ? 1100 : 1800
+    const cylinderWidth = isScreenSizeSm ? 1200 : 2000
     const faceCount = items.length
-    const faceWidth = cylinderWidth / faceCount
+    const faceWidth = 320 // Smaller fixed width for each card
     const radius = cylinderWidth / (2 * Math.PI)
     const rotation = useMotionValue(0)
     const transform = useTransform(
       rotation,
       (value) => `rotate3d(0, 1, 0, ${value}deg)`
     )
+
+    useEffect(() => {
+      if (autoRotate && !isPaused) {
+        const interval = setInterval(() => {
+          rotation.set(rotation.get() - 0.5)
+        }, 30)
+        return () => clearInterval(interval)
+      }
+    }, [autoRotate, isPaused, rotation])
 
     return (
       <div
@@ -145,16 +158,24 @@ const Carousel = memo(
 
 Carousel.displayName = "Carousel"
 
-export function ThreeDCarousel({ items, onItemClick }: { items: React.ReactNode[], onItemClick?: (index: number) => void }) {
+export function ThreeDCarousel({ items, onItemClick, autoRotate = false }: { items: React.ReactNode[], onItemClick?: (index: number) => void, autoRotate?: boolean }) {
   const [isCarouselActive, setIsCarouselActive] = useState(true)
+  const [isPaused, setIsPaused] = useState(false)
 
   return (
-    <motion.div layout className="relative">
-      <div className="relative h-[300px] w-full overflow-hidden">
+    <motion.div 
+      layout 
+      className="relative w-full"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      <div className="relative h-[250px] w-full overflow-visible pt-8">
         <Carousel
           items={items}
           isCarouselActive={isCarouselActive}
           onItemClick={onItemClick}
+          autoRotate={autoRotate}
+          isPaused={isPaused}
         />
       </div>
     </motion.div>

@@ -123,35 +123,46 @@ export default function TrendingBets() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.05 }}
-              className="min-w-[300px] md:min-w-[350px]"
+              className="min-w-[320px] md:min-w-[360px]"
             >
-              <Card className="p-3 hover:shadow-lg transition-all cursor-pointer group hover:scale-[1.02] bg-white/95 backdrop-blur-sm border-white/20 h-full">
+              <Card className="p-4 hover:shadow-2xl transition-all cursor-pointer group hover:scale-[1.02] bg-black/20 backdrop-blur-xl border-white/10 h-full hover:bg-black/30">
                 <div className="space-y-2">
-                  <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-neutral-700 dark:group-hover:text-neutral-300 transition-colors">
+                  <h3 className="font-semibold text-sm line-clamp-2 text-white/90 group-hover:text-white transition-colors">
                     {bet.title}
                   </h3>
 
-                  <div className="flex gap-2">
-                    <span className={`text-xs font-medium ${
-                      bet.verdict === "YES" ? "text-green-600" : "text-red-600"
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      bet.verdict === "YES" 
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" 
+                        : "bg-rose-500/20 text-rose-300 border border-rose-500/30"
                     }`}>
-                      {bet.verdict === "YES" ? "✅ YES" : "❌ NO"}
+                      {bet.verdict === "YES" ? "YES" : "NO"}
                     </span>
-                    <span className="text-xs text-neutral-500">
+                    <span className="text-xs text-white/50">
                       {bet.confidence}% conf
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3 text-xs text-neutral-500">
-                    <span>{bet.impliedOdds}%</span>
-                    <span>{bet.volume}</span>
-                    <span>{bet.endsIn}</span>
+                  <div className="flex items-center gap-4 text-xs text-white/40 pt-2 border-t border-white/5">
+                    <span className="flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3" />
+                      {bet.impliedOdds}%
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <DollarSign className="w-3 h-3" />
+                      {bet.volume}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {bet.endsIn}
+                    </span>
                   </div>
                 </div>
 
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <span className="bg-neutral-900/90 dark:bg-white/90 text-white dark:text-neutral-900 px-3 py-1 rounded-full text-sm font-medium">
-                    Open AI report →
+                  <span className="bg-white/95 text-black px-4 py-1.5 rounded-full text-xs font-semibold shadow-lg">
+                    View Analysis →
                   </span>
                 </div>
               </Card>

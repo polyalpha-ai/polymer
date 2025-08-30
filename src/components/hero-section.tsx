@@ -45,19 +45,19 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
   };
 
   return (
-    <section className="relative flex-shrink-0 flex items-center justify-center px-4 pt-24 pb-12 md:pt-32 md:pb-16">
+    <section className="relative flex-shrink-0 flex items-center justify-center px-4 pt-24 md:pt-32 md:pb-6">
       <div className="container max-w-3xl mx-auto">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 1, delay: 0.5, ease: [0.215, 0.61, 0.355, 1] }}
           className="text-center space-y-8"
         >
           <div className="space-y-6">
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.1 }}
+              transition={{ duration: 1, delay: 0.7, ease: [0.215, 0.61, 0.355, 1] }}
               className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight font-[family-name:var(--font-space)]"
             >
               <span className="text-white drop-shadow-lg">
@@ -68,7 +68,7 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
+              transition={{ duration: 1, delay: 0.9, ease: "easeOut" }}
               className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto leading-relaxed drop-shadow-md"
             >
               In hindsight, we all would've bought Bitcoin. 
@@ -80,7 +80,7 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
           <motion.form
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
+            transition={{ duration: 1, delay: 1.1, ease: [0.215, 0.61, 0.355, 1] }}
             onSubmit={handleSubmit}
             className="space-y-4 max-w-xl mx-auto"
           >

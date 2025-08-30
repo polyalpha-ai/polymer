@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import HeroSection from "@/components/hero-section";
 import HighestROI from "@/components/highest-roi";
 import ResultPanel from "@/components/result-panel";
@@ -8,8 +9,11 @@ import MonetizationStrip from "@/components/monetization-strip";
 import ShareModal from "@/components/share-modal";
 import TelegramBotModal from "@/components/telegram-bot-modal";
 import HowItWorksModal from "@/components/how-it-works-modal";
+import LoadingScreen from "@/components/loading-screen";
 
 export default function Home() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [contentVisible, setContentVisible] = useState(false);
   const [polymarketUrl, setPolymarketUrl] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showResult, setShowResult] = useState(false);
@@ -36,9 +40,28 @@ export default function Home() {
     }, 2000);
   };
 
+  const handleLoadingComplete = () => {
+    setIsLoading(false);
+    // Delay content appearance for smooth transition
+    setTimeout(() => {
+      setContentVisible(true);
+    }, 100);
+  };
+
   return (
     <>
-      <div className="relative h-screen overflow-hidden flex flex-col">
+      <AnimatePresence mode="wait">
+        {isLoading && (
+          <LoadingScreen onComplete={handleLoadingComplete} />
+        )}
+      </AnimatePresence>
+
+      <motion.div 
+        className="relative h-screen overflow-hidden flex flex-col"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: contentVisible ? 1 : 0 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+      >
         <HeroSection 
           onAnalyze={handleAnalyze}
           isAnalyzing={isAnalyzing}
@@ -56,7 +79,7 @@ export default function Home() {
         <HighestROI />
         
         <MonetizationStrip />
-      </div>
+      </motion.div>
 
       <ShareModal
         open={shareModalOpen}
