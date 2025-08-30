@@ -328,11 +328,14 @@ const cleanup = await memoryManagementTool.execute({
 
 ### With AI SDK Tools
 ```typescript
-import { valyuMemoryToolSet } from '@/lib/tools';
+import { valyuDeepSearchTool, valyuWebSearchTool } from '@/lib/tools';
 
 const result = await generateText({
   model: openai('gpt-4'),
-  tools: valyuMemoryToolSet,
+  tools: {
+    valyuDeepSearch: valyuDeepSearchTool,
+    valyuWebSearch: valyuWebSearchTool,
+  },
   prompt: 'Research AI in healthcare',
 });
 ```

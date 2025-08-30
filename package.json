@@ -6,11 +6,17 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:forecast": "tsx scripts/test-forecast.ts",
+    "demo:simple": "tsx scripts/demo-simple.ts",
+    "debug:drivers": "tsx scripts/debug-drivers.ts",
+    "test:valyu": "tsx scripts/test-valyu-search.ts",
+    "test:valyu:simple": "tsx scripts/test-valyu-simple.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.23",
     "ai": "^5.0.28",
+    "dotenv": "^16.4.5",
     "next": "15.5.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -27,6 +33,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
     "tailwindcss": "^4",
+    "tsx": "^4.19.0",
     "typescript": "^5"
   }
 }

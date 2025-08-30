@@ -53,11 +53,14 @@ This directory contains the complete implementation of Valyu search tools for th
 ```typescript
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { valyuToolSet } from '@/lib/tools';
+import { valyuDeepSearchTool, valyuWebSearchTool } from '@/lib/tools';
 
 const result = await generateText({
   model: openai('gpt-4o'),
-  tools: valyuToolSet,
+  tools: {
+    valyuDeepSearch: valyuDeepSearchTool,
+    valyuWebSearch: valyuWebSearchTool,
+  },
   prompt: 'What are the latest AI developments?',
 });
 ```
@@ -111,7 +114,10 @@ type ValyuSearchResult = {
 ```typescript
 const { text, steps } = await generateText({
   model: openai('gpt-4o'),
-  tools: valyuToolSet,
+  tools: {
+    valyuDeepSearch: valyuDeepSearchTool,
+    valyuWebSearch: valyuWebSearchTool,
+  },
   prompt: 'Complex research query',
   stopWhen: stepCountIs(5),
 });
@@ -121,8 +127,13 @@ const { text, steps } = await generateText({
 ```typescript
 import { TypedToolCall, TypedToolResult } from 'ai';
 
-type ValyuToolCall = TypedToolCall<typeof valyuToolSet>;
-type ValyuToolResult = TypedToolResult<typeof valyuToolSet>;
+// Types are available from individual tool imports
+type ValyuSearchResult = {
+  title: string;
+  url: string;
+  snippet?: string;
+  publishedAt?: string;
+};
 ```
 
 ### Error Recovery

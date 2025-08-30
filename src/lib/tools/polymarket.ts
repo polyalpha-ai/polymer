@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { tool } from "ai";
 
 // Polymarket API bases
 const GAMMA_BASE = "https://gamma-api.polymarket.com" as const;
@@ -273,7 +272,7 @@ async function getRecentTrades(token_id: string): Promise<AnyObj[]> {
 }
 
 // ---- Build payload from slug ----
-async function buildLLMPayloadFromSlug(
+export async function buildLLMPayloadFromSlug(
   slug: string,
   options: { historyInterval?: string; withBooks?: boolean; withTrades?: boolean; maxCandidates?: number } = {}
 ): Promise<LLMPayloadEnhanced> {
@@ -393,24 +392,4 @@ async function buildLLMPayloadFromSlug(
 }
 
 // ---- Tool ----
-const inputSchema = z.object({
-  slug: z.string().min(1).describe("Polymarket slug, e.g. 'will-trump-win-2024'."),
-  historyInterval: z.string().optional().describe("History interval (e.g., '1d','4h','1h')."),
-  withBooks: z.boolean().optional().default(true).describe("Include order book top-of-book sizes."),
-  withTrades: z.boolean().optional().default(false).describe("Include recent trades (slower)."),
-});
-
-export const polymarketBundleTool = tool({
-  description: "Fetch Polymarket market data by slug. Bundles market facts, live prices, history, optional order books and trades into a single call.",
-  inputSchema,
-  execute: async ({ slug, historyInterval, withBooks = true, withTrades = false }) => {
-    const payload = await buildLLMPayloadFromSlug(slug, { historyInterval, withBooks, withTrades });
-    return {
-      success: true,
-      slug,
-      payload,
-    };
-  },
-});
-
-// Consumers can infer the result from the tool response shape.
+// Consumers can call buildLLMPayloadFromSlug directly for Polymarket data.
