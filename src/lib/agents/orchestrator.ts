@@ -1,7 +1,7 @@
 import { planAgent } from './planner';
-import { researchBothSides } from './researcher';
+import { researchBothSides, conductFollowUpResearch } from './researcher';
 import { criticAgent } from './critic';
-import { analystAgent, MarketFn } from './analyst';
+import { analystAgent, analystAgentWithCritique, MarketFn } from './analyst';
 import { reporterAgent } from './reporter';
 import { generateDrivers } from './driver-generator';
 import { selectOptimalHistoryInterval, explainIntervalChoice } from './interval-optimizer';
@@ -144,61 +144,116 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
     }
   });
 
-  // Step 5: Research both sides using web search and market data
+  // Step 5: FIRST RESEARCH CYCLE - Initial evidence gathering
   onProgress?.('researching', {
-    message: 'Researching evidence for both sides...',
+    message: 'Starting initial evidence research...',
     searchSeeds: plan.searchSeeds.length
   });
   
-  const { pro, con } = await researchBothSides(question, plan, marketData);
-  console.log(`🔎 Research complete: pro=${pro.length}, con=${con.length}`);
+  console.log(`🔍 === RESEARCH CYCLE 1: Initial Evidence Gathering ===`);
+  const { pro: initialPro, con: initialCon } = await researchBothSides(question, plan, marketData);
+  console.log(`🔎 Initial research complete: pro=${initialPro.length}, con=${initialCon.length}`);
   
-  onProgress?.('research_complete', {
-    message: 'Evidence research completed',
-    proEvidence: pro.length,
-    conEvidence: con.length,
-    urls: [...new Set([...pro.flatMap(p => p.urls), ...con.flatMap(c => c.urls)])].slice(0, 10) // Show first 10 unique URLs
+  onProgress?.('initial_research_complete', {
+    message: 'Initial evidence research completed',
+    proEvidence: initialPro.length,
+    conEvidence: initialCon.length,
+    urls: [...new Set([...initialPro.flatMap(p => p.urls), ...initialCon.flatMap(c => c.urls)])].slice(0, 10)
   });
 
-  // Merge evidence lists
-  const evidence: Evidence[] = [...pro, ...con];
-
-  // Step 6: Skeptic pass (metadata only)
+  // Step 6: CRITIC ANALYSIS - Identify gaps and provide feedback
   onProgress?.('criticism', {
-    message: 'Running critical analysis...',
-    evidenceCount: evidence.length
+    message: 'Running critical analysis to identify gaps...',
+    evidenceCount: initialPro.length + initialCon.length
   });
   
-  await criticAgent(question, pro, con);
-  console.log(`🧪 Critic pass completed.`);
-  
+  console.log(`🧪 === CRITIC ANALYSIS: Identifying Gaps ===`);
+  const critique = await criticAgent(question, initialPro, initialCon);
+  console.log(`🧪 Critic analysis complete:`);
+  console.log(`   - Missing evidence areas: ${critique.missing.length}`);
+  console.log(`   - Duplication flags: ${critique.duplicationFlags.length}`);
+  console.log(`   - Data concerns: ${critique.dataConcerns.length}`);
+  console.log(`   - Follow-up searches suggested: ${critique.followUpSearches.length}`);
+  console.log(`   - Correlation adjustments: ${Object.keys(critique.correlationAdjustments).length}`);
+
   onProgress?.('criticism_complete', {
-    message: 'Critical analysis completed'
+    message: 'Critical analysis completed',
+    missingAreas: critique.missing.length,
+    followUpSearches: critique.followUpSearches.length,
+    duplicationFlags: critique.duplicationFlags.length,
+    dataConcerns: critique.dataConcerns.length
   });
 
-  // Step 7: Aggregate (neutral; optional aware via marketFn)
+  // Step 7: SECOND RESEARCH CYCLE - Targeted follow-up research
+  let finalPro = initialPro;
+  let finalCon = initialCon;
+  let neutralEvidence: Evidence[] = [];
+  
+  if (critique.followUpSearches.length > 0) {
+    onProgress?.('followup_research', {
+      message: 'Conducting targeted follow-up research...',
+      followUpSearches: critique.followUpSearches.length
+    });
+    
+    console.log(`🔍 === RESEARCH CYCLE 2: Targeted Follow-up Research ===`);
+    const followUpResults = await conductFollowUpResearch(question, critique.followUpSearches, marketData);
+    
+    // Merge follow-up evidence with initial evidence
+    finalPro = [...initialPro, ...followUpResults.pro];
+    finalCon = [...initialCon, ...followUpResults.con];
+    neutralEvidence = followUpResults.neutral;
+    
+    console.log(`🔎 Follow-up research complete: +${followUpResults.pro.length} pro, +${followUpResults.con.length} con, +${followUpResults.neutral.length} neutral`);
+    console.log(`🔎 Total evidence: pro=${finalPro.length}, con=${finalCon.length}, neutral=${neutralEvidence.length}`);
+    
+    onProgress?.('followup_research_complete', {
+      message: 'Follow-up research completed',
+      additionalPro: followUpResults.pro.length,
+      additionalCon: followUpResults.con.length,
+      neutralEvidence: followUpResults.neutral.length,
+      totalPro: finalPro.length,
+      totalCon: finalCon.length
+    });
+  } else {
+    console.log(`🔍 === RESEARCH CYCLE 2: Skipped (no gaps identified) ===`);
+    onProgress?.('followup_research_skipped', {
+      message: 'Follow-up research skipped - no gaps identified'
+    });
+  }
+
+  // Merge all evidence lists
+  const allEvidence: Evidence[] = [...finalPro, ...finalCon, ...neutralEvidence];
+
+  // Step 8: ENHANCED ANALYSIS - Apply critic feedback to aggregation
   onProgress?.('aggregating', {
-    message: 'Aggregating evidence and calculating probabilities...',
-    evidenceItems: evidence.length
+    message: 'Aggregating evidence with critic feedback...',
+    totalEvidence: allEvidence.length
   });
   
-  const { pNeutral, pAware, influence, clusters } = await analystAgent(
-    question, p0, evidence, opts.rhoByCluster, polymarketFn
+  console.log(`🧮 === ENHANCED ANALYSIS: Applying Critic Feedback ===`);
+  const { pNeutral, pAware, influence, clusters, filteredEvidence } = await analystAgentWithCritique(
+    question, p0, allEvidence, critique, opts.rhoByCluster, polymarketFn
   );
   console.log(
-    `🧮 Aggregation: pNeutral=${pNeutral.toFixed(3)}, pAware=${pAware !== undefined ? pAware.toFixed(3) : 'n/a'}, influenceItems=${influence.length}, clusters=${clusters.length}`
+    `🧮 Enhanced aggregation complete: pNeutral=${pNeutral.toFixed(3)}, pAware=${pAware !== undefined ? pAware.toFixed(3) : 'n/a'}, influenceItems=${influence.length}, clusters=${clusters.length}`
   );
-  
+  console.log(`🧮 Evidence used in final analysis: ${filteredEvidence?.length || allEvidence.length}/${allEvidence.length} (${allEvidence.length - (filteredEvidence?.length || allEvidence.length)} filtered out)`);
+
   onProgress?.('aggregation_complete', {
-    message: 'Probability aggregation completed',
+    message: 'Enhanced probability aggregation completed',
     pNeutral: pNeutral,
     pAware: pAware,
     influenceItems: influence.length,
     clusters: clusters.length,
+    evidenceUsed: filteredEvidence?.length || allEvidence.length,
+    evidenceFiltered: allEvidence.length - (filteredEvidence?.length || allEvidence.length),
     topInfluences: influence.slice(0, 5).map(i => ({ evidenceId: i.evidenceId, logLR: i.logLR, deltaPP: i.deltaPP }))
   });
 
-  // Step 8: Build report text via model
+  // Use filtered evidence for final card if available
+  const finalEvidence = filteredEvidence || allEvidence;
+
+  // Step 9: Build report text via model
   onProgress?.('reporting', {
     message: 'Generating final report...',
     drivers: autoDrivers
@@ -224,7 +279,7 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
     influence,
     clusters,
     provenance: [
-      ...evidence.flatMap(e => e.urls),
+      ...finalEvidence.flatMap(e => e.urls),
       `https://polymarket.com/event/${opts.polymarketSlug}`
     ],
     markdownReport: markdown,

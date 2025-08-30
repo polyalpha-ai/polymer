@@ -42,7 +42,7 @@ const EvidenceItemSchema = z.object({
 });
 
 const EvidenceSchema = z.object({
-  items: z.array(EvidenceItemSchema).min(1).max(5).describe('Array of evidence items found through research')
+  items: z.array(EvidenceItemSchema).min(0).max(5).describe('Array of evidence items found through research')
 });
 
 function makeResearchPrompt(question: string, plan: { subclaims: string[]; searchSeeds: string[] }, side: 'FOR' | 'AGAINST', marketData?: MarketData) {
@@ -66,11 +66,30 @@ Research Process:
 2. Evaluate each piece of evidence for quality and reliability
 3. Return your findings as structured JSON matching the required schema
 
-Evidence Classification Rules:
-- Type A (2.0 cap): Primary data, official documents, direct measurements
-- Type B (1.6 cap): Secondary sources with good methodology, expert analysis  
-- Type C (0.8 cap): Tertiary sources that cite primary/secondary sources
-- Type D (0.3 cap): Weak sources, speculation, unverified claims
+ENHANCED Evidence Classification Rules:
+- Type A (2.0 cap): PRIMARY SOURCES
+  * Official documents, press releases, regulatory filings
+  * Direct quotes from named officials
+  * First-hand reporting with on-the-record sources
+  * Government data, court documents, official transcripts
+  
+- Type B (1.6 cap): HIGH-QUALITY SECONDARY SOURCES  
+  * Major news outlets with verified sourcing (Reuters, Bloomberg, WSJ, FT, AP)
+  * Expert analysis with clear methodology
+  * Academic papers, think tank reports with data
+  * Investigative journalism with multiple sources
+  
+- Type C (0.8 cap): STANDARD SECONDARY SOURCES
+  * Reputable news outlets citing primary sources
+  * Industry publications with good track records
+  * Opinion pieces by recognized experts
+  * Reports that reference primary data
+  
+- Type D (0.3 cap): WEAK OR SPECULATIVE SOURCES
+  * Unverified social media, blogs, forums
+  * Anonymous sources without corroboration
+  * Opinion pieces without supporting data
+  * Rumor, speculation, or hearsay
 
 Scoring Guidelines:
 - Verifiability: 1.0 if you can recompute/verify numbers, else estimate 0-1
@@ -97,7 +116,7 @@ async function conductResearch(
     // Step 1: Use tools to gather information (without structured output)
     const searchResult = await generateText({
       model,
-      system: 'You are an expert researcher. Use the available search tools to thoroughly investigate the question and gather relevant information.',
+      system: 'You are an expert researcher. Use the available search tools to thoroughly investigate the question and gather relevant information. when searching dont add site: to the search query',
       prompt: `${prompt}\n\nUse the search tools to find relevant information, then summarize your findings.`,
       tools: {
         valyuDeepSearch: valyuDeepSearchTool,
@@ -174,4 +193,193 @@ export async function researchBothSides(
   console.log(`✅ Research complete: ${pro.length} pro evidence, ${con.length} con evidence`);
   
   return { pro, con };
+}
+
+export async function conductFollowUpResearch(
+  question: string,
+  followUpSearches: Array<{ query: string; rationale: string; side: 'FOR' | 'AGAINST' | 'NEUTRAL' }>,
+  marketData?: MarketData
+): Promise<{ pro: Evidence[]; con: Evidence[]; neutral: Evidence[] }> {
+  console.log(`🔍 Starting follow-up research with ${followUpSearches.length} targeted searches...`);
+  
+  const results = await Promise.all(
+    followUpSearches.map(async (search) => {
+      const evidence = await conductTargetedResearch(question, search, marketData);
+      return { side: search.side, evidence };
+    })
+  );
+
+  const pro = results.filter(r => r.side === 'FOR').flatMap(r => r.evidence);
+  const con = results.filter(r => r.side === 'AGAINST').flatMap(r => r.evidence);
+  const neutral = results.filter(r => r.side === 'NEUTRAL').flatMap(r => r.evidence);
+
+  console.log(`✅ Follow-up research complete: ${pro.length} pro, ${con.length} con, ${neutral.length} neutral evidence`);
+  
+  return { pro, con, neutral };
+}
+
+// Helper function for automatic evidence type classification
+function classifyEvidenceType(claim: string, urls: string[], sourceDescription: string): {
+  suggestedType: 'A' | 'B' | 'C' | 'D';
+  verifiabilityBonus: number;
+  explanation: string;
+} {
+  let score = 0;
+  let explanation = '';
+  let verifiabilityBonus = 0;
+
+  // URL-based classification
+  const highQualityDomains = ['reuters.com', 'bloomberg.com', 'wsj.com', 'ft.com', 'apnews.com', 'ap.org'];
+  const officialDomains = ['.gov', 'federalreserve.gov', 'sec.gov'];
+  
+  const hasHighQualitySource = urls.some(url => highQualityDomains.some(domain => url.includes(domain)));
+  const hasOfficialSource = urls.some(url => officialDomains.some(domain => url.includes(domain)));
+  
+  if (hasOfficialSource) {
+    score += 3;
+    explanation += 'Official government source (+3). ';
+  } else if (hasHighQualitySource) {
+    score += 2;
+    explanation += 'High-quality news source (+2). ';
+  }
+
+  // Content-based classification
+  const primaryIndicators = ['official statement', 'press release', 'according to documents', 'on the record', 'regulatory filing'];
+  const secondaryIndicators = ['expert analysis', 'investigation found', 'data shows', 'study reveals'];
+  const tertiaryIndicators = ['sources say', 'reportedly', 'according to reports'];
+  const weakIndicators = ['alleged', 'rumored', 'speculation', 'unconfirmed'];
+
+  const text = claim.toLowerCase() + ' ' + sourceDescription.toLowerCase();
+  
+  if (primaryIndicators.some(indicator => text.includes(indicator))) {
+    score += 2;
+    explanation += 'Primary source indicators (+2). ';
+  } else if (secondaryIndicators.some(indicator => text.includes(indicator))) {
+    score += 1;
+    explanation += 'Secondary source indicators (+1). ';
+  } else if (tertiaryIndicators.some(indicator => text.includes(indicator))) {
+    score -= 1;
+    explanation += 'Tertiary source indicators (-1). ';
+  } else if (weakIndicators.some(indicator => text.includes(indicator))) {
+    score -= 2;
+    explanation += 'Weak source indicators (-2). ';
+  }
+
+  // Recency bonus
+  if (text.includes('2025') || text.includes('recent')) {
+    verifiabilityBonus = 0.1;
+    explanation += 'Recent publication (+0.1 verifiability). ';
+  }
+
+  // Determine type based on total score
+  let suggestedType: 'A' | 'B' | 'C' | 'D';
+  if (score >= 4) {
+    suggestedType = 'A';
+  } else if (score >= 2) {
+    suggestedType = 'B';
+  } else if (score >= 0) {
+    suggestedType = 'C';
+  } else {
+    suggestedType = 'D';
+  }
+
+  return { suggestedType, verifiabilityBonus, explanation };
+}
+
+async function conductTargetedResearch(
+  question: string,
+  search: { query: string; rationale: string; side: 'FOR' | 'AGAINST' | 'NEUTRAL' },
+  marketData?: MarketData
+): Promise<Evidence[]> {
+  try {
+    const marketContext = marketData ? `
+Market Context:
+- Question: ${marketData.market_facts.question}
+- Current Price: ${marketData.market_state_now[0]?.mid || 'N/A'}
+- Volume: ${marketData.market_facts.volume || 'N/A'}
+` : '';
+
+    const prompt = `You are conducting targeted research to fill a specific gap in the analysis.
+
+${marketContext}
+Original Question: ${question}
+Search Query: ${search.query}
+Rationale: ${search.rationale}
+Target Side: ${search.side}
+
+Use the search tools to find specific evidence related to this query. Focus on high-quality, verifiable sources that address the identified gap.
+
+After searching, return 1-3 high-quality evidence items that directly address the search rationale.`;
+
+    // Step 1: Use tools to gather information
+    const searchResult = await generateText({
+      model,
+      system: 'You are an expert researcher conducting targeted searches to fill specific analytical gaps.',
+      prompt: `${prompt}\n\nUse the search tools to find relevant information, then summarize your findings.`,
+      tools: {
+        valyuDeepSearch: valyuDeepSearchTool,
+        valyuWebSearch: valyuWebSearchTool,
+      },
+    });
+
+    // Step 2: Generate structured evidence based on search results
+    const evidencePrompt = `Based on your targeted research findings, create 1-3 high-quality evidence items.
+
+Research Summary: ${searchResult.text}
+Target Side: ${search.side}
+
+Create evidence items in JSON format matching this schema:
+{
+  "items": [
+    {
+      "id": "string",
+      "claim": "string", 
+      "polarity": "${search.side === 'FOR' ? '1' : '-1'}",
+      "type": "A|B|C|D",
+      "urls": ["string"] // or [] if no sources,
+      "originId": "string",
+      "firstReport": boolean,
+      "verifiability": number,
+      "corroborationsIndep": number,
+      "consistency": number
+    }
+  ]
+}
+
+Focus on quality over quantity. Ensure each evidence item directly addresses the search rationale.
+
+AUTOMATIC CLASSIFICATION HINTS:
+- If URL contains: reuters.com, bloomberg.com, wsj.com, ft.com, ap.org → likely Type B
+- If URL contains: .gov, official press releases, regulatory filings → likely Type A  
+- If source mentions "according to documents", "official statement", "on the record" → likely Type A/B
+- If source uses words like "sources say", "reportedly", "alleged" → likely Type C/D
+- Recent publication (2025) gets +0.1 verifiability bonus
+- Multiple independent sources mentioned gets +1 corroborationsIndep
+
+Return ONLY the JSON object, no other text.`;
+
+    const structuredResult = await generateText({
+      model,
+      system: 'You are a structured data generator. Return only valid JSON matching the exact schema provided.',
+      prompt: evidencePrompt,
+      experimental_output: Output.object({
+        schema: EvidenceSchema,
+      }),
+    });
+
+    // Access the structured output and convert polarity strings to numbers
+    if (structuredResult.experimental_output) {
+      const items = structuredResult.experimental_output.items.map((item: any) => ({
+        ...item,
+        polarity: search.side === 'NEUTRAL' ? 0 : (item.polarity === '1' ? 1 : -1) // Convert string to number, handle NEUTRAL
+      }));
+      return items as Evidence[];
+    } else {
+      console.warn(`No structured output generated for targeted research: ${search.query}`);
+      return [];
+    }
+  } catch (error) {
+    console.error(`Error in targeted research for "${search.query}":`, error);
+    return [];
+  }
 }
