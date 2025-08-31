@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
             withBooks,
             withTrades,
             onProgress,
-            sessionId,
+            sessionId: sessionId || undefined,
             customerId: userData.subscription_tier === 'pay_per_use' ? userData.polar_customer_id : undefined
           });
 

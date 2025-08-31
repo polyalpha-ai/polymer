@@ -110,7 +110,8 @@ async function conductResearch(
   question: string,
   plan: { subclaims: string[]; searchSeeds: string[] },
   side: 'FOR' | 'AGAINST',
-  marketData?: MarketData
+  marketData?: MarketData,
+  sessionId?: string
 ): Promise<Evidence[]> {
   try {
     const prompt = makeResearchPrompt(question, plan, side, marketData);
@@ -129,7 +130,7 @@ async function conductResearch(
       tools: {
         valyuDeepSearch: valyuDeepSearchTool,
         valyuWebSearch: valyuWebSearchTool,
-      },
+      }
     });
 
     // Step 2: Generate structured evidence based on search results
@@ -193,14 +194,15 @@ Return ONLY the JSON object, no other text.`;
 export async function researchBothSides(
   question: string,
   plan: { subclaims: string[]; searchSeeds: string[] },
-  marketData?: MarketData
+  marketData?: MarketData,
+  sessionId?: string
 ) {
   console.log('🔍 Starting research with GPT-5 and Valyu search tools...');
   
   // Conduct research for both sides in parallel
   const [pro, con] = await Promise.all([
-    conductResearch(question, plan, 'FOR', marketData),
-    conductResearch(question, plan, 'AGAINST', marketData)
+    conductResearch(question, plan, 'FOR', marketData, sessionId),
+    conductResearch(question, plan, 'AGAINST', marketData, sessionId)
   ]);
   
   console.log(`✅ Research complete: ${pro.length} pro evidence, ${con.length} con evidence`);
@@ -211,13 +213,14 @@ export async function researchBothSides(
 export async function conductFollowUpResearch(
   question: string,
   followUpSearches: Array<{ query: string; rationale: string; side: 'FOR' | 'AGAINST' | 'NEUTRAL' }>,
-  marketData?: MarketData
+  marketData?: MarketData,
+  sessionId?: string
 ): Promise<{ pro: Evidence[]; con: Evidence[]; neutral: Evidence[] }> {
   console.log(`🔍 Starting follow-up research with ${followUpSearches.length} targeted searches...`);
   
   const results = await Promise.all(
     followUpSearches.map(async (search) => {
-      const evidence = await conductTargetedResearch(question, search, marketData);
+      const evidence = await conductTargetedResearch(question, search, marketData, sessionId);
       return { side: search.side, evidence };
     })
   );
@@ -302,7 +305,8 @@ function classifyEvidenceType(claim: string, urls: string[], sourceDescription: 
 async function conductTargetedResearch(
   question: string,
   search: { query: string; rationale: string; side: 'FOR' | 'AGAINST' | 'NEUTRAL' },
-  marketData?: MarketData
+  marketData?: MarketData,
+  sessionId?: string
 ): Promise<Evidence[]> {
   try {
     const marketContext = marketData ? `
@@ -332,7 +336,7 @@ After searching, return 1-3 high-quality evidence items that directly address th
       tools: {
         valyuDeepSearch: valyuDeepSearchTool,
         valyuWebSearch: valyuWebSearchTool,
-      },
+      }
     });
 
     // Step 2: Generate structured evidence based on search results
