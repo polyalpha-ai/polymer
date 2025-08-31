@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { tool } from "ai";
 import { Valyu, SearchType as ValyuSearchSDKType } from "valyu-js";
+import { trackValyuUsageImmediate } from "../usage-tracking";
 
 // Types for Valyu search results
 export interface ValyuSearchResult {
@@ -50,6 +51,7 @@ export type ValyuToolResult = {
   results: ValyuSearchResult[];
   tx_id?: string | null;
   error?: string;
+  totalCost?: number; // Cost in dollars
 };
 
 // Valyu DeepSearch Tool - Comprehensive search across multiple domains
@@ -108,15 +110,24 @@ export const valyuDeepSearchTool = tool({
         return errorResult;
       }
 
+      const cost = response.total_deduction_dollars || response.total_cost_dollars || 0;
       console.log(
-        `[ValyuDeepSearchTool] Success. Results: ${response.results?.length}, TX_ID: ${response.tx_id}`
+        `[ValyuDeepSearchTool] Success. Results: ${response.results?.length}, TX_ID: ${response.tx_id}, Cost: $${cost}`
       );
+      
+      // Track cost immediately to Polar
+      if (cost > 0) {
+        trackValyuUsageImmediate(cost, query, 'deep_search').catch(err => 
+          console.error('[ValyuDeepSearchTool] Failed to track usage:', err)
+        );
+      }
       
       const toolResult: ValyuToolResult = {
         success: true,
         query,
         results: response.results || [],
         tx_id: response.tx_id,
+        totalCost: cost,
       };
       
       return toolResult;
@@ -178,15 +189,24 @@ export const valyuWebSearchTool = tool({
         return errorResult;
       }
       
+      const cost = response.total_deduction_dollars || response.total_cost_dollars || 0;
       console.log(
-        `[ValyuWebSearchTool] Success. Results: ${response.results?.length}, TX_ID: ${response.tx_id}`
+        `[ValyuWebSearchTool] Success. Results: ${response.results?.length}, TX_ID: ${response.tx_id}, Cost: $${cost}`
       );
+      
+      // Track cost immediately to Polar
+      if (cost > 0) {
+        trackValyuUsageImmediate(cost, query, 'web_search').catch(err => 
+          console.error('[ValyuWebSearchTool] Failed to track usage:', err)
+        );
+      }
       
       const toolResult: ValyuToolResult = {
         success: true,
         query,
         results: response.results || [],
         tx_id: response.tx_id,
+        totalCost: cost,
       };
       
       return toolResult;
