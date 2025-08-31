@@ -19,8 +19,8 @@ const spaceGrotesk = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: "Polyseer | See the future.",
-  description: "Paste any Polymarket link and get an analyst-grade Yes/No verdict with citations. Free to start.",
-  keywords: ["polymarket", "betting", "prediction markets", "AI analysis", "crypto betting"],
+  description: "Paste any Polymarket link and get an analyst-grade Yes/No verdict with citations.",
+  keywords: ["polymarket", "prediction markets", "AI deep research"],
   authors: [{ name: "Polyseer" }],
   openGraph: {
     title: "Polyseer — AI Verdicts for Polymarket",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     siteName: "Polyseer",
     images: [
       {
-        url: "/og-image.png",
+        url: "/og.png",
         width: 1200,
         height: 630,
         alt: "Verdict: ✅ YES • Confidence 78% • polyseer.xyz",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Polyseer — AI Verdicts for Polymarket",
     description: "Paste any Polymarket link and get an analyst-grade Yes/No verdict with citations.",
-    images: ["/og-image.png"],
+    images: ["/og.png"],
   },
   robots: {
     index: true,
