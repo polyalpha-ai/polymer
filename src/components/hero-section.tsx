@@ -79,16 +79,20 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
               </span>
             </motion.h1>
 
-            <motion.p
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1, delay: 0.9, ease: "easeOut" }}
-              className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto leading-relaxed drop-shadow-md"
+              className="flex justify-center"
             >
-              In hindsight, we all would&apos;ve bought Bitcoin. 
-              <br className="hidden sm:block" />
-              Seer into the future, so you can retire off the next one.
-            </motion.p>
+              <div className="bg-white/20 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/30 max-w-2xl">
+                <p className="text-lg md:text-xl text-white/90 leading-relaxed text-center">
+                  In hindsight, we all would&apos;ve bought Bitcoin. 
+                  <br className="hidden sm:block" />
+                  Seer into the future, so you can retire off the next one.
+                </p>
+              </div>
+            </motion.div>
           </div>
 
           <motion.form
@@ -98,32 +102,6 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
             onSubmit={handleSubmit}
             className="space-y-4 max-w-2xl mx-auto"
           >
-            {/* Powered by Valyu pill */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 1.3, ease: "easeOut" }}
-              className="flex justify-center mb-4"
-            >
-              <div className="relative flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
-                <span className="text-sm text-white/80 font-medium">Powered by</span>
-                <a
-                  href="https://platform.valyu.network"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center hover:scale-105 transition-transform"
-                >
-                  <Image
-                    src="/valyu.svg"
-                    alt="Valyu"
-                    width={80}
-                    height={80}
-                    className="h-4 w-auto opacity-80 hover:opacity-100 transition-opacity"
-                  />
-                </a>
-              </div>
-            </motion.div>
-
             <div className="relative flex gap-2 transition-all duration-300">
               <motion.div 
                 className="relative"
@@ -181,6 +159,32 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Powered by Valyu pill - below input */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 1.3, ease: "easeOut" }}
+              className="flex justify-center mt-4"
+            >
+              <div className="relative flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
+                <span className="text-sm text-white/80 font-medium">Powered by</span>
+                <a
+                  href="https://platform.valyu.network"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center hover:scale-105 transition-transform"
+                >
+                  <Image
+                    src="/valyu.svg"
+                    alt="Valyu"
+                    width={80}
+                    height={80}
+                    className="h-4 w-auto opacity-80 hover:opacity-100 transition-opacity"
+                  />
+                </a>
+              </div>
+            </motion.div>
           </motion.form>
         </motion.div>
       </div>
