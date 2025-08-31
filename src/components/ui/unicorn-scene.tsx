@@ -6,7 +6,7 @@ export default function UnicornScene() {
   return (
     <div className="absolute inset-0 w-full h-full">
       <UnicornStudio 
-        projectId="8MUyuriZSs64c63JcZGF" 
+        projectId="1grEuiVDSVmyvEMAYhA6" 
         className="w-full h-full"
       />
     </div>
