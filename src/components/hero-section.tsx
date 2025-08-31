@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ZoomTransition from "@/components/zoom-transition";
+import Image from "next/image";
 
 interface HeroSectionProps {
   onAnalyze: (url: string) => void;
@@ -97,6 +98,32 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
             onSubmit={handleSubmit}
             className="space-y-4 max-w-2xl mx-auto"
           >
+            {/* Powered by Valyu pill */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 1.3, ease: "easeOut" }}
+              className="flex justify-center mb-4"
+            >
+              <div className="relative flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
+                <span className="text-sm text-white/80 font-medium">Powered by</span>
+                <a
+                  href="https://platform.valyu.network"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center hover:scale-105 transition-transform"
+                >
+                  <Image
+                    src="/valyu.svg"
+                    alt="Valyu"
+                    width={80}
+                    height={80}
+                    className="h-4 w-auto opacity-80 hover:opacity-100 transition-opacity"
+                  />
+                </a>
+              </div>
+            </motion.div>
+
             <div className="relative flex gap-2 transition-all duration-300">
               <motion.div 
                 className="relative"
@@ -153,24 +180,6 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
-
-            <div className="flex items-center justify-center gap-4 text-sm">
-              <button
-                type="button"
-                onClick={handleTrySample}
-                className="text-white/70 hover:text-white transition-colors"
-              >
-                Try a sample
-              </button>
-              <span className="text-white/50">•</span>
-              <button
-                type="button"
-                onClick={onShowHowItWorks}
-                className="text-white/70 hover:text-white transition-colors"
-              >
-                What&apos;s this?
-              </button>
             </div>
           </motion.form>
         </motion.div>
