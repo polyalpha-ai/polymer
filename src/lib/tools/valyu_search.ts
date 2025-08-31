@@ -2,6 +2,7 @@ import { z } from "zod";
 import { tool } from "ai";
 import { Valyu, SearchType as ValyuSearchSDKType } from "valyu-js";
 import { trackValyuUsageImmediate } from "../usage-tracking";
+import { memoryService } from '@/lib/memory/weaviate-memory';
 
 // Types for Valyu search results
 export interface ValyuSearchResult {
@@ -110,7 +111,7 @@ export const valyuDeepSearchTool = tool({
         return errorResult;
       }
 
-      const cost = response.total_deduction_dollars || response.total_cost_dollars || 0;
+      const cost = response.total_deduction_dollars || 0;
       console.log(
         `[ValyuDeepSearchTool] Success. Results: ${response.results?.length}, TX_ID: ${response.tx_id}, Cost: $${cost}`
       );
@@ -129,7 +130,15 @@ export const valyuDeepSearchTool = tool({
         tx_id: response.tx_id,
         totalCost: cost,
       };
-      
+      // Optionally ingest into memory if enabled
+      try {
+        if (process.env.MEMORY_ENABLED === 'true' && toolResult.results.length > 0) {
+          await memoryService.storeSearchResults(toolResult.results, query);
+        }
+      } catch (e) {
+        console.warn('[ValyuDeepSearchTool] Memory ingest skipped:', e instanceof Error ? e.message : e);
+      }
+
       return toolResult;
     } catch (error) {
       const errorMessage =
@@ -189,7 +198,7 @@ export const valyuWebSearchTool = tool({
         return errorResult;
       }
       
-      const cost = response.total_deduction_dollars || response.total_cost_dollars || 0;
+      const cost = response.total_deduction_dollars || 0;
       console.log(
         `[ValyuWebSearchTool] Success. Results: ${response.results?.length}, TX_ID: ${response.tx_id}, Cost: $${cost}`
       );
@@ -208,7 +217,15 @@ export const valyuWebSearchTool = tool({
         tx_id: response.tx_id,
         totalCost: cost,
       };
-      
+      // Optionally ingest into memory if enabled
+      try {
+        if (process.env.MEMORY_ENABLED === 'true' && toolResult.results.length > 0) {
+          await memoryService.storeSearchResults(toolResult.results, query);
+        }
+      } catch (e) {
+        console.warn('[ValyuWebSearchTool] Memory ingest skipped:', e instanceof Error ? e.message : e);
+      }
+
       return toolResult;
     } catch (error) {
       const errorMessage =

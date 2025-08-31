@@ -7,7 +7,7 @@ import { TrendingUp } from "lucide-react";
 const mockHighROIBets = [
   {
     id: 1,
-    title: "Trump for a third term",
+    title: "Will the Fed cut rates",
     currentOdds: 45,
     predictedOdds: 68,
     roi: "+51%",

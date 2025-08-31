@@ -1,7 +1,7 @@
 import { Evidence } from "./types";
 import { clamp } from "./math";
 
-export const TYPE_CAPS: Record<Evidence["type"], number> = { A: 2.0, B: 1.6, C: 0.8, D: 0.3 };
+export const TYPE_CAPS: Record<Evidence["type"], number> = { A: 1.0, B: 0.6, C: 0.3, D: 0.2 };
 export const WEIGHTS = { v: 0.5, r: 0.3, u: 0.2 } as const;
 export const FIRST_REPORT_PENALTY = 0.5;
 

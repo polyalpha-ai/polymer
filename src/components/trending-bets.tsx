@@ -64,7 +64,7 @@ const mockTrendingBets = [
   },
   {
     id: 6,
-    title: "Will there be a recession in 2024?",
+    title: "Will there be a recession in 2025?",
     verdict: "NO",
     confidence: 73,
     updatedMins: 34,
