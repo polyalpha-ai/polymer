@@ -85,7 +85,7 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
               transition={{ duration: 1, delay: 0.9, ease: "easeOut" }}
               className="flex justify-center"
             >
-              <div className="bg-white/20 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/30 max-w-2xl">
+              <div className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-2xl border border-white/30 max-w-2xl">
                 <p className="text-lg md:text-xl text-white/90 leading-relaxed text-center">
                   In hindsight, we all would&apos;ve bought Bitcoin. 
                   <br className="hidden sm:block" />
@@ -170,10 +170,10 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
               <div className="relative flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
                 <span className="text-sm text-white/80 font-medium">Powered by</span>
                 <a
-                  href="https://platform.valyu.network"
+                  href="https://valyu.network"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center hover:scale-105 transition-transform"
+                  className="inline-flex items-center hover:scale-105 transition-transform pt-0.5"
                 >
                   <Image
                     src="/valyu.svg"

@@ -184,13 +184,13 @@ export default function Header() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
           >
-            <Link href='/' className='inline-block'>
+            <Link href='/' className='inline-block pt-2'>
               <Image
                 src='/polyseer.svg'
                 alt='Polyseer'
                 width={200}
                 height={80}
-                className='h-20 md:h-20 w-auto drop-shadow-md'
+                className='h-24 md:h-24 w-auto drop-shadow-md'
                 priority
               />
             </Link>
