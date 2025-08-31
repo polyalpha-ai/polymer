@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 import { checkUsageLimit, decrementAnalysisCount, setAnalysisContext, clearAnalysisContext } from '@/lib/usage-tracking';
 import { createAnalysisSession, completeAnalysisSession, failAnalysisSession } from '@/lib/analysis-session';
 import { setLLMContext, clearLLMContext } from '@/lib/polar-llm-strategy';
+import { canAnonymousUserQuery, incrementAnonymousUsage } from '@/lib/anonymous-usage';
 
 export const maxDuration = 800;
 
@@ -15,34 +16,47 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
+    let userData: any = null;
+    let isAnonymous = false;
+
     if (!user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+      // Handle anonymous user
+      isAnonymous = true;
+      
+      // Check anonymous usage limits
+      const { canProceed, reason } = await canAnonymousUserQuery();
+      if (!canProceed) {
+        return NextResponse.json(
+          { error: reason || 'Daily limit exceeded for anonymous users' },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Handle authenticated user
+      // Get user data including subscription info
+      const { data: fetchedUserData } = await supabase
+        .from('users')
+        .select('polar_customer_id, subscription_tier, subscription_status, analyses_remaining')
+        .eq('id', user.id)
+        .single();
 
-    // Get user data including subscription info
-    const { data: userData } = await supabase
-      .from('users')
-      .select('polar_customer_id, subscription_tier, subscription_status, analyses_remaining')
-      .eq('id', user.id)
-      .single();
+      if (!fetchedUserData) {
+        return NextResponse.json(
+          { error: 'User profile not found' },
+          { status: 404 }
+        );
+      }
 
-    if (!userData) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+      userData = fetchedUserData;
 
-    // Check usage limits
-    const { canProceed, reason } = await checkUsageLimit(user.id);
-    if (!canProceed) {
-      return NextResponse.json(
-        { error: reason || 'Usage limit exceeded' },
-        { status: 403 }
-      );
+      // Check usage limits for authenticated users
+      const { canProceed, reason } = await checkUsageLimit(user.id);
+      if (!canProceed) {
+        return NextResponse.json(
+          { error: reason || 'Usage limit exceeded' },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await req.json();
@@ -62,15 +76,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create analysis session
-    const session = await createAnalysisSession(user.id, polymarketSlug);
-    sessionId = session.id;
-    
-    // Set context for immediate usage tracking (for pay-per-use customers)
-    if (userData.subscription_tier === 'pay_per_use' && userData.polar_customer_id) {
-      setAnalysisContext(user.id, userData.polar_customer_id); // For Valyu API tracking
-      setLLMContext(user.id, userData.polar_customer_id); // For LLM token tracking
-      console.log(`[Forecast] Set tracking context for pay-per-use customer: ${userData.polar_customer_id}`);
+    // Create analysis session (skip for anonymous users)
+    let session: any = null;
+    if (!isAnonymous && user) {
+      session = await createAnalysisSession(user.id, polymarketSlug);
+      sessionId = session.id;
+      
+      // Set context for immediate usage tracking (for pay-per-use customers)
+      if (userData.subscription_tier === 'pay_per_use' && userData.polar_customer_id) {
+        setAnalysisContext(user.id, userData.polar_customer_id); // For Valyu API tracking
+        setLLMContext(user.id, userData.polar_customer_id); // For LLM token tracking
+        console.log(`[Forecast] Set tracking context for pay-per-use customer: ${userData.polar_customer_id}`);
+      }
+    } else {
+      // For anonymous users, increment usage count immediately
+      await incrementAnonymousUsage();
+      console.log(`[Forecast] Anonymous user used daily query`);
     }
 
     // Create a ReadableStream for Server-Sent Events
@@ -92,8 +113,8 @@ export async function POST(req: NextRequest) {
           // Send initial connection event
           sendEvent({ type: 'connected', message: 'Starting analysis...', sessionId });
 
-          // Decrement analysis count for subscription users
-          if (userData.subscription_tier === 'subscription') {
+          // Decrement analysis count for subscription users (skip for anonymous)
+          if (!isAnonymous && user && userData.subscription_tier === 'subscription') {
             await decrementAnalysisCount(user.id);
           }
 
@@ -126,7 +147,7 @@ export async function POST(req: NextRequest) {
             withTrades,
             onProgress,
             sessionId: sessionId || undefined,
-            customerId: userData.subscription_tier === 'pay_per_use' ? userData.polar_customer_id : undefined
+            customerId: !isAnonymous && userData.subscription_tier === 'pay_per_use' ? userData.polar_customer_id : undefined
           });
 
           // Valyu usage is tracked immediately as calls are made

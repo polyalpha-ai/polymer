@@ -10,6 +10,7 @@ import { ChevronDown, ChevronRight, ExternalLink, CheckCircle, Clock, AlertCircl
 import Image from "next/image";
 import { ForecastCard } from "@/lib/forecasting/types";
 import { useAuthStore } from "@/lib/stores/use-auth-store";
+import { canClientAnonymousUserQuery } from "@/lib/anonymous-usage-client";
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 
@@ -84,6 +85,15 @@ function AnalysisContent() {
     if (!slug) {
       setError('Invalid Polymarket URL');
       return;
+    }
+
+    // Check anonymous usage limits if user is not authenticated
+    if (!user) {
+      const { canProceed, reason } = canClientAnonymousUserQuery();
+      if (!canProceed) {
+        setError(reason || 'Daily limit exceeded for anonymous users');
+        return;
+      }
     }
 
     fetch('/api/forecast', {
@@ -207,17 +217,14 @@ function AnalysisContent() {
 
   useEffect(() => {
     setMounted(true);
-    // Check if user is authenticated
-    if (!user) {
-      router.push('/');
-    }
-  }, [user, router]);
+    // Note: Removed authentication redirect to allow anonymous users
+  }, []);
 
   useEffect(() => {
-    if (mounted && user && url && !isComplete && steps.length === 0) {
+    if (mounted && url && !isComplete && steps.length === 0) {
       startAnalysis();
     }
-  }, [mounted, user, url, isComplete, steps.length, startAnalysis]);
+  }, [mounted, url, isComplete, steps.length, startAnalysis]);
 
   if (!mounted) return null;
 
@@ -260,6 +267,31 @@ function AnalysisContent() {
       
       {/* Content overlay */}
       <div className="relative z-50 max-w-4xl mx-auto pt-24">
+        
+        {/* Anonymous User Banner */}
+        {!user && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl p-4"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-white/90 mb-1">Free Daily Analysis</h3>
+                <p className="text-xs text-white/70">
+                  You&apos;re using 1 of 1 free analysis per day. Sign up for unlimited access!
+                </p>
+              </div>
+              <Button
+                onClick={() => router.push('/')}
+                size="sm"
+                className="bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-1"
+              >
+                Sign Up
+              </Button>
+            </div>
+          </motion.div>
+        )}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
