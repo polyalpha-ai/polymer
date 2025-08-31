@@ -1,0 +1,77 @@
+import { Ingestion } from "@polar-sh/ingestion";
+import { LLMStrategy } from "@polar-sh/ingestion/strategies/LLM";
+import { openai } from "@ai-sdk/openai";
+
+// Store current analysis context for LLM tracking
+let currentUserContext: { userId?: string; customerId?: string } = {};
+
+export function setLLMContext(userId: string, customerId: string) {
+  currentUserContext = { userId, customerId };
+  console.log(`[PolarLLM] Context set for user: ${userId}, customer: ${customerId}`);
+}
+
+export function clearLLMContext() {
+  currentUserContext = {};
+  console.log('[PolarLLM] Context cleared');
+}
+
+// Get a wrapped model for the current context
+export function getPolarTrackedModel(modelName: string = "gpt-5") {
+  // If no customer ID in context, return unwrapped model
+  if (!currentUserContext.customerId) {
+    console.log('[PolarLLM] No customer ID in context, returning unwrapped model');
+    return openai(modelName);
+  }
+
+  if (!process.env.POLAR_ACCESS_TOKEN) {
+    console.error('[PolarLLM] POLAR_ACCESS_TOKEN not found - returning unwrapped model');
+    return openai(modelName);
+  }
+
+  try {
+    console.log(`[PolarLLM] Creating tracked model for customer: ${currentUserContext.customerId}, model: ${modelName}`);
+    
+    const ingestion = Ingestion({ 
+      accessToken: process.env.POLAR_ACCESS_TOKEN 
+    })
+    .strategy(new LLMStrategy(openai(modelName)))
+    .ingest("llm_tokens"); // This matches the Polar meter
+    
+    // Return the wrapped model with customer tracking
+    const trackedModel = ingestion.client({
+      customerId: currentUserContext.customerId
+    });
+    
+    console.log('[PolarLLM] Tracked model created successfully');
+    return trackedModel;
+  } catch (error) {
+    console.error('[PolarLLM] Failed to create tracked model:', error);
+    console.log('[PolarLLM] Falling back to unwrapped model');
+    return openai(modelName);
+  }
+}
+
+// Direct function for specific user (used in forecast route)
+export function getPolarTrackedModelForUser(userId: string, customerId: string, modelName: string = "gpt-5") {
+  if (!process.env.POLAR_ACCESS_TOKEN) {
+    console.error('[PolarLLM] POLAR_ACCESS_TOKEN not found - returning unwrapped model');
+    return openai(modelName);
+  }
+
+  try {
+    console.log(`[PolarLLM] Creating tracked model for user: ${userId}, customer: ${customerId}, model: ${modelName}`);
+    
+    const ingestion = Ingestion({ 
+      accessToken: process.env.POLAR_ACCESS_TOKEN 
+    })
+    .strategy(new LLMStrategy(openai(modelName)))
+    .ingest("llm_tokens");
+    
+    return ingestion.client({
+      customerId: customerId
+    });
+  } catch (error) {
+    console.error('[PolarLLM] Failed to create tracked model:', error);
+    return openai(modelName);
+  }
+}

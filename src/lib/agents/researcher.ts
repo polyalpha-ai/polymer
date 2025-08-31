@@ -3,8 +3,10 @@ import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { Evidence } from '../forecasting/types';
 import { valyuDeepSearchTool, valyuWebSearchTool } from '../tools/valyu_search';
+import { getPolarTrackedModel } from '../polar-llm-strategy';
 
-const model = openai('gpt-5');
+// Get model dynamically to use current context
+const getModel = () => getPolarTrackedModel('gpt-5');
 
 interface MarketData {
   market_facts: {
@@ -115,7 +117,7 @@ async function conductResearch(
     
     // Step 1: Use tools to gather information (without structured output)
     const searchResult = await generateText({
-      model,
+      model: getModel(),
       system: 'You are an expert researcher. Use the available search tools to thoroughly investigate the question and gather relevant information. when searching dont add site: to the search query',
       prompt: `${prompt}\n\nUse the search tools to find relevant information, then summarize your findings.`,
       tools: {
@@ -150,7 +152,7 @@ Now create 2-5 evidence items in JSON format matching this schema:
 Return ONLY the JSON object, no other text.`;
 
     const structuredResult = await generateText({
-      model,
+      model: getModel(),
       system: 'You are a structured data generator. Return only valid JSON matching the exact schema provided.',
       prompt: evidencePrompt,
       experimental_output: Output.object({
@@ -313,7 +315,7 @@ After searching, return 1-3 high-quality evidence items that directly address th
 
     // Step 1: Use tools to gather information
     const searchResult = await generateText({
-      model,
+      model: getModel(),
       system: 'You are an expert researcher conducting targeted searches to fill specific analytical gaps.',
       prompt: `${prompt}\n\nUse the search tools to find relevant information, then summarize your findings.`,
       tools: {
@@ -359,7 +361,7 @@ AUTOMATIC CLASSIFICATION HINTS:
 Return ONLY the JSON object, no other text.`;
 
     const structuredResult = await generateText({
-      model,
+      model: getModel(),
       system: 'You are a structured data generator. Return only valid JSON matching the exact schema provided.',
       prompt: evidencePrompt,
       experimental_output: Output.object({

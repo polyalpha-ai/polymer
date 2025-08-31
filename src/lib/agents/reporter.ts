@@ -1,8 +1,10 @@
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { InfluenceItem, ClusterMeta } from '../forecasting/types';
+import { getPolarTrackedModel } from '../polar-llm-strategy';
 
-const model = openai('gpt-5');
+// Get model dynamically to use current context
+const getModel = () => getPolarTrackedModel('gpt-5');
 
 export async function reporterAgent(
   question: string,
@@ -29,7 +31,7 @@ Question: ${question}
 Write 6-10 bullet points: key drivers, what would change our mind (EV triggers), and caveats. Keep it tight and cite evidence ids, not raw URLs.
 `;
   const { text } = await generateText({ 
-    model, 
+    model: getModel(), 
     system: `Write clean, skimmable Markdown only.`, 
     prompt 
   });

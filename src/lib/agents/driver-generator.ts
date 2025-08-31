@@ -1,8 +1,10 @@
 import { generateObject } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
+import { getPolarTrackedModel } from '../polar-llm-strategy';
 
-const model = openai('gpt-5');
+// Get model dynamically to use current context
+const getModel = () => getPolarTrackedModel('gpt-5');
 
 const DriversSchema = z.object({
   drivers: z.array(z.string()).min(3).max(5).describe('Key factors that could influence the outcome (3-8 concise factors)'),
@@ -24,7 +26,7 @@ interface MarketData {
 export async function generateDrivers(marketData: MarketData): Promise<string[]> {
   try {
     const result = await generateObject({
-      model,
+      model: getModel(),
       schema: DriversSchema,
       system: 'You are an expert analyst. Identify the key factors that would most likely influence the outcome of this prediction market.',
       prompt: `Analyze this prediction market and identify 3-5 key drivers that could influence the outcome:

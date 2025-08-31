@@ -2,8 +2,10 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { openai } from '@ai-sdk/openai';
 import { Evidence } from '../forecasting/types';
+import { getPolarTrackedModel } from '../polar-llm-strategy';
 
-const model = openai('gpt-5');
+// Get model dynamically to use current context
+const getModel = () => getPolarTrackedModel('gpt-5');
 
 export const CritiqueSchema = z.object({
   missing: z.array(z.string()).describe('missed disconfirming evidence or failure modes'),
@@ -21,7 +23,7 @@ export type Critique = z.infer<typeof CritiqueSchema>;
 
 export async function criticAgent(question: string, pro: Evidence[], con: Evidence[]): Promise<Critique> {
   const { object } = await generateObject({
-    model,
+    model: getModel(),
     schema: CritiqueSchema,
     system: `You are the Skeptic. Your job is to identify gaps, biases, and quality issues in the evidence, then provide actionable feedback to improve the analysis.`,
     prompt: `Question: ${question}

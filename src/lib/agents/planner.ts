@@ -1,8 +1,10 @@
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { openai } from '@ai-sdk/openai';
+import { getPolarTrackedModel } from '../polar-llm-strategy';
 
-const model = openai('gpt-5');
+// Get model dynamically to use current context
+const getModel = () => getPolarTrackedModel('gpt-5');
 
 export const PlanSchema = z.object({
   subclaims: z.array(z.string().min(5)).min(2).max(10),
@@ -15,7 +17,7 @@ export type Plan = z.infer<typeof PlanSchema>;
 
 export async function planAgent(question: string): Promise<Plan> {
   const { object } = await generateObject({
-    model,
+    model: getModel(),
     schema: PlanSchema,
     system: `You are the Planner. Break the forecasting question into checkable subclaims and search seeds. Keep it concise and rigorous. Limit subclaims to 2-10 items.`,
     prompt: `Question: ${question}

@@ -18,12 +18,20 @@ export interface PolymarketOrchestratorOpts {
   withBooks?: boolean;                          // include order book data
   withTrades?: boolean;                         // include recent trades
   onProgress?: (step: string, details: any) => void;  // progress callback
+  sessionId?: string;                           // Session ID for cost tracking
+  customerId?: string;                          // Polar customer ID for LLM tracking
 }
 
 
 
 export async function runPolymarketForecastPipeline(opts: PolymarketOrchestratorOpts): Promise<ForecastCard> {
   const { onProgress } = opts;
+  
+  // Set LLM context if customer ID provided
+  if (opts.customerId) {
+    const { setLLMContext } = await import('../polar-llm-strategy');
+    setLLMContext(opts.sessionId || '', opts.customerId);
+  }
   
   // Step 1: Fetch initial Polymarket data to analyze market characteristics
   console.log(`🔍 Fetching Polymarket data for slug: ${opts.polymarketSlug}`);
@@ -153,7 +161,7 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
   });
   
   console.log(`🔍 === RESEARCH CYCLE 1: Initial Evidence Gathering ===`);
-  const { pro: initialPro, con: initialCon } = await researchBothSides(question, plan, marketData);
+  const { pro: initialPro, con: initialCon } = await researchBothSides(question, plan, marketData, opts.sessionId);
   console.log(`🔎 Initial research complete: pro=${initialPro.length}, con=${initialCon.length}`);
   
   onProgress?.('initial_research_complete', {
@@ -209,7 +217,7 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
     });
     
     console.log(`🔍 === RESEARCH CYCLE 2: Targeted Follow-up Research ===`);
-    const followUpResults = await conductFollowUpResearch(question, critique.followUpSearches, marketData);
+    const followUpResults = await conductFollowUpResearch(question, critique.followUpSearches, marketData, opts.sessionId);
     
     // Merge follow-up evidence with initial evidence
     finalPro = [...initialPro, ...followUpResults.pro];
