@@ -59,7 +59,7 @@ const mockHighROIBets = [
 
 function BetCard({ bet }: { bet: typeof mockHighROIBets[0] }) {
   return (
-    <div className="w-[300px] h-[180px] bg-black/20 backdrop-blur-xl rounded-xl p-4 flex flex-col justify-between hover:bg-black/40 transition-all cursor-pointer border border-white/5 shadow-xl hover:shadow-2xl hover:border-white/10">
+    <div className="w-[300px] h-[180px] bg-white/20 backdrop-blur-sm rounded-2xl p-4 flex flex-col justify-between hover:bg-white/30 transition-all cursor-pointer border border-white/30 shadow-xl hover:shadow-2xl hover:border-white/40">
       <div className="flex flex-col h-full justify-between">
         <div>
           <h3 className="font-medium text-sm text-white/90 mb-2 line-clamp-1">
@@ -69,14 +69,14 @@ function BetCard({ bet }: { bet: typeof mockHighROIBets[0] }) {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-baseline gap-2">
               <span className={`text-3xl font-bold ${
-                bet.verdict === "YES" ? "text-emerald-300/90" : "text-rose-300/90"
+                bet.verdict === "YES" ? "text-emerald-200" : "text-rose-200"
               }`}>
                 {bet.roi}
               </span>
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                 bet.verdict === "YES" 
-                  ? "bg-emerald-500/20 text-emerald-300/80 border border-emerald-500/20" 
-                  : "bg-rose-500/20 text-rose-300/80 border border-rose-500/20"
+                  ? "bg-emerald-400/30 text-emerald-100 border border-emerald-400/40" 
+                  : "bg-rose-400/30 text-rose-100 border border-rose-400/40"
               }`}>
                 {bet.verdict}
               </span>
@@ -86,25 +86,25 @@ function BetCard({ bet }: { bet: typeof mockHighROIBets[0] }) {
 
         <div className="space-y-2">
           <div className="flex justify-between text-xs">
-            <div className="text-white/50">
+            <div className="text-white/60">
               <span>Now: </span>
-              <span className="text-white/70 font-medium">{bet.currentOdds}%</span>
+              <span className="text-white/80 font-medium">{bet.currentOdds}%</span>
             </div>
-            <div className="text-white/50">
+            <div className="text-white/60">
               <span>AI: </span>
-              <span className="text-white/70 font-medium">{bet.predictedOdds}%</span>
+              <span className="text-white/80 font-medium">{bet.predictedOdds}%</span>
             </div>
-            <div className="text-white/50">
-              <span className="text-white/70 font-medium">{bet.volume}</span>
+            <div className="text-white/60">
+              <span className="text-white/80 font-medium">{bet.volume}</span>
             </div>
           </div>
           
-          <div className="w-full bg-white/10 rounded-full h-1 overflow-hidden">
+          <div className="w-full bg-white/20 backdrop-blur-sm rounded-full h-1.5 overflow-hidden border border-white/20">
             <div 
               className={`h-full rounded-full transition-all ${
                 bet.verdict === "YES" 
-                  ? "bg-gradient-to-r from-emerald-500/70 to-emerald-400/70" 
-                  : "bg-gradient-to-r from-rose-500/70 to-rose-400/70"
+                  ? "bg-gradient-to-r from-emerald-400/80 to-emerald-300/80" 
+                  : "bg-gradient-to-r from-rose-400/80 to-rose-300/80"
               }`}
               style={{ width: `${bet.confidence}%` }}
             />
