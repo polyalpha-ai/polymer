@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight, ExternalLink, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import Image from "next/image";
-import UnicornStudio from "unicornstudio-react";
 import { ForecastCard } from "@/lib/forecasting/types";
+import { useAuthStore } from "@/lib/stores/use-auth-store";
 
 interface ProgressEvent {
   type: 'connected' | 'progress' | 'complete' | 'error';
@@ -53,8 +53,10 @@ const STEP_CONFIG: Record<string, { name: string; description: string }> = {
   report_complete: { name: 'Analysis Finished', description: 'Final report generated' }
 };
 
-export default function AnalysisPage() {
+function AnalysisContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { user } = useAuthStore();
   const url = searchParams.get("url");
   const [mounted, setMounted] = useState(false);
   const [steps, setSteps] = useState<AnalysisStep[]>([]);
@@ -203,13 +205,17 @@ export default function AnalysisPage() {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // Check if user is authenticated
+    if (!user) {
+      router.push('/');
+    }
+  }, [user, router]);
 
   useEffect(() => {
-    if (mounted && url && !isComplete && steps.length === 0) {
+    if (mounted && user && url && !isComplete && steps.length === 0) {
       startAnalysis();
     }
-  }, [mounted, url, isComplete, steps.length, startAnalysis]);
+  }, [mounted, user, url, isComplete, steps.length, startAnalysis]);
 
   if (!mounted) return null;
 
@@ -235,12 +241,19 @@ export default function AnalysisPage() {
 
   return (
     <div className="min-h-screen bg-black text-white p-4 relative overflow-hidden">
-      {/* Unicorn Studio Background */}
+      {/* Video Background */}
       <div className="fixed inset-0 w-full h-full z-0">
-        <UnicornStudio 
-          projectId="mgWUvXbgMGrxlSGJ7lQt" 
-          className="w-full h-full"
-        />
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src="/analysis.webm" type="video/webm" />
+        </video>
+        {/* Dark overlay for better text readability */}
+        <div className="absolute inset-0 bg-black/40"></div>
       </div>
       
       {/* Content overlay */}
@@ -537,5 +550,23 @@ export default function AnalysisPage() {
       {/* Bottom fade overlay */}
       <div className="fixed bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black via-black/50 to-transparent pointer-events-none z-40"></div>
     </div>
+  );
+}
+
+export default function AnalysisPage() {
+  return (
+    <Suspense 
+      fallback={
+        <div className="min-h-screen bg-black flex items-center justify-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full"
+          />
+        </div>
+      }
+    >
+      <AnalysisContent />
+    </Suspense>
   );
 }

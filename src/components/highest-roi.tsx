@@ -47,7 +47,7 @@ const mockHighROIBets = [
   },
   {
     id: 5,
-    title: "Recession in 2024",
+    title: "Recession in 2026",
     currentOdds: 38,
     predictedOdds: 15,
     roi: "+60%",

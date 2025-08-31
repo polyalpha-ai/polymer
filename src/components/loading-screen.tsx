@@ -61,8 +61,8 @@ export default function LoadingScreen({ onComplete }: LoadingScreenProps) {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ 
-                opacity: phase === "exit" ? 0 : 1,
-                scale: phase === "exit" ? 0.95 : 1,
+                opacity: 1,
+                scale: 1,
               }}
               transition={{ duration: 0.8, ease: "easeOut" }}
             >
@@ -149,8 +149,6 @@ export default function LoadingScreen({ onComplete }: LoadingScreenProps) {
                   backgroundColor: phase === "intro" && i === 0
                     ? "rgba(255,255,255,0.8)"
                     : phase === "reveal" && i === 1
-                    ? "rgba(255,255,255,0.8)"
-                    : phase === "exit" && i === 2
                     ? "rgba(255,255,255,0.8)"
                     : "rgba(255,255,255,0.3)",
                 }}

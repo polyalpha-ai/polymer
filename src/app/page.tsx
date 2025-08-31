@@ -10,6 +10,9 @@ import ShareModal from "@/components/share-modal";
 import TelegramBotModal from "@/components/telegram-bot-modal";
 import HowItWorksModal from "@/components/how-it-works-modal";
 import LoadingScreen from "@/components/loading-screen";
+import { useAuthStore } from "@/lib/stores/use-auth-store";
+import { AuthModal } from "@/components/auth-modal";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
@@ -21,23 +24,20 @@ export default function Home() {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
   const [howItWorksModalOpen, setHowItWorksModalOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  
+  const { user, initialized, refreshUser } = useAuthStore();
+  const router = useRouter();
 
   const handleAnalyze = async (url: string) => {
-    setPolymarketUrl(url);
-    setIsAnalyzing(true);
-    setShowResult(true);
+    // Check if user is authenticated
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
     
-    // Simulate API call
-    setTimeout(() => {
-      setResultData({
-        verdict: "YES",
-        confidence: 78,
-        summary: "Based on current polling aggregates, prediction market momentum, and historical accuracy patterns",
-        marketTitle: "Will Bitcoin reach $100,000 by end of 2024?",
-        marketId: "sample-123",
-      });
-      setIsAnalyzing(false);
-    }, 2000);
+    // Navigate to analysis page with URL
+    router.push(`/analysis?url=${encodeURIComponent(url)}`);
   };
 
   const handleLoadingComplete = () => {
@@ -47,6 +47,31 @@ export default function Home() {
       setContentVisible(true);
     }, 100);
   };
+
+  // Skip loading screen on auth redirect or if already initialized
+  useEffect(() => {
+    // Check if we're coming from auth callback or checkout
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromAuth = urlParams.get('from_auth');
+    const checkoutSuccess = urlParams.get('checkout');
+    
+    if (fromAuth || (initialized && user)) {
+      // Skip loading screen if coming from auth or already logged in
+      setIsLoading(false);
+      setContentVisible(true);
+    }
+    
+    // Handle checkout success
+    if (checkoutSuccess === 'success' && user) {
+      // Clean up URL
+      router.replace('/');
+      // Refresh user data to get updated subscription info
+      const intervals = [1000, 2000, 3000, 5000];
+      intervals.forEach(delay => {
+        setTimeout(() => refreshUser(), delay);
+      });
+    }
+  }, [initialized, user, router, refreshUser]);
 
   return (
     <>
@@ -97,6 +122,11 @@ export default function Home() {
       <HowItWorksModal
         open={howItWorksModalOpen}
         onOpenChange={setHowItWorksModalOpen}
+      />
+
+      <AuthModal
+        open={authModalOpen}
+        onOpenChange={setAuthModalOpen}
       />
     </>
   );

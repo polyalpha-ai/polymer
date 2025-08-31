@@ -141,7 +141,7 @@ export default function ResultPanel({ data, isLoading, onShare }: ResultPanelPro
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
                 <p className="text-sm text-amber-800 dark:text-amber-200">
                   <span className="font-semibold">Note:</span> This analysis is for research purposes only. 
-                  Markets are risky and past performance doesn't guarantee future results.
+                  Markets are risky and past performance doesn&apos;t guarantee future results.
                 </p>
               </div>
             </motion.div>

@@ -59,7 +59,7 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
 
   return (
     <section className="relative flex-shrink-0 flex items-center justify-center px-4 pt-24 md:pt-32 md:pb-6">
-      <div className="container max-w-3xl mx-auto">
+      <div className="container max-w-5xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -84,7 +84,7 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
               transition={{ duration: 1, delay: 0.9, ease: "easeOut" }}
               className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto leading-relaxed drop-shadow-md"
             >
-              In hindsight, we all would've bought Bitcoin. 
+              In hindsight, we all would&apos;ve bought Bitcoin. 
               <br className="hidden sm:block" />
               Seer into the future, so you can retire off the next one.
             </motion.p>
@@ -95,7 +95,7 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 1.1, ease: [0.215, 0.61, 0.355, 1] }}
             onSubmit={handleSubmit}
-            className="space-y-4 max-w-xl mx-auto"
+            className="space-y-4 max-w-2xl mx-auto"
           >
             <div className="relative flex gap-2 transition-all duration-300">
               <motion.div 
@@ -169,7 +169,7 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
                 onClick={onShowHowItWorks}
                 className="text-white/70 hover:text-white transition-colors"
               >
-                What's this?
+                What&apos;s this?
               </button>
             </div>
           </motion.form>
