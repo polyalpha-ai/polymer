@@ -13,18 +13,15 @@ export async function reporterAgent(
   influence: InfluenceItem[],
   clusters: ClusterMeta[],
   drivers: string[],
-  evidence: Evidence[], // Add evidence array to access actual claims
-  topN = 6
+  evidence: Evidence[],
+  topN = 12
 ) {
-  const top = [...influence].sort((a,b)=>b.deltaPP-a.deltaPP).slice(0, topN);
-  
-  // Create evidence lookup map for easy access to claims
-  const evidenceMap = evidence.reduce((map, ev) => {
-    map[ev.id] = ev;
-    return map;
-  }, {} as Record<string, Evidence>);
-  
-  // Get the most influential evidence with their claims
+  const top = [...influence].sort((a, b) => b.deltaPP - a.deltaPP).slice(0, topN);
+
+  // Lookup maps
+  const evidenceMap = evidence.reduce((map, ev) => { map[ev.id] = ev; return map; }, {} as Record<string, Evidence>);
+  const clusterMap = clusters.reduce((m, c) => { m[c.clusterId] = c; return m; }, {} as Record<string, ClusterMeta>);
+
   const topEvidenceWithClaims = top.map(t => {
     const ev = evidenceMap[t.evidenceId];
     return {
@@ -32,60 +29,75 @@ export async function reporterAgent(
       claim: ev?.claim || 'Evidence not found',
       polarity: ev?.polarity || 0,
       deltaPP: t.deltaPP,
-      type: ev?.type || 'Unknown'
+      type: ev?.type || 'Unknown',
+      publishedAt: ev?.publishedAt || 'n/a',
+      urls: ev?.urls || [],
+      originId: ev?.originId || 'unknown',
+      verifiability: ev?.verifiability ?? 0,
+      corroborationsIndep: ev?.corroborationsIndep ?? 0,
+      consistency: ev?.consistency ?? 0,
+      cluster: ev?.originId ? clusterMap[ev.originId] : undefined,
+      logLR: influence.find(i => i.evidenceId === t.evidenceId)?.logLR ?? 0,
     };
   });
 
-  // Separate pro and con evidence for explanation
-  const proEvidence = topEvidenceWithClaims.filter(e => e.polarity > 0);
-  const conEvidence = topEvidenceWithClaims.filter(e => e.polarity < 0);
-  
-  // Determine the prediction direction
   const predictionDirection = pNeutral > 0.5 ? 'YES' : 'NO';
-  const confidence = Math.abs(pNeutral - 0.5) * 200; // Convert to 0-100 scale
+  const confidence = Math.abs(pNeutral - 0.5) * 200;
+
+  const catalogLines = topEvidenceWithClaims.map(e => {
+    const domain = e.urls && e.urls.length ? (() => { try { return new URL(e.urls[0]).hostname.replace(/^www\./, ''); } catch { return 'unknown'; } })() : 'unknown';
+    const clusterMeta = e.cluster ? `cluster=${e.cluster.clusterId}, rho=${e.cluster.rho.toFixed(2)}, mEff=${e.cluster.mEff.toFixed(2)}` : 'cluster=n/a';
+    return `- ${e.id} | ${e.polarity > 0 ? '+' : '-'} | Type ${e.type} | Δpp=${(e.deltaPP * 100).toFixed(2)} | logLR=${e.logLR.toFixed(3)} | ver=${e.verifiability.toFixed(2)} | corrInd=${e.corroborationsIndep} | cons=${e.consistency.toFixed(2)} | date=${e.publishedAt} | src=${domain} | ${clusterMeta}\n  Claim: ${e.claim}`;
+  }).join('\n');
 
   const prompt = `
-You are the Reporter. Produce a concise Markdown **Forecast Card**.
+You are the Reporter. Produce a detailed, skimmable Markdown **Forecast Card** that explains how each evidence item shaped the probability.
 
 ANALYSIS RESULTS:
-- Primary probability p_neutral = ${(pNeutral*100).toFixed(1)}%
-- Secondary market-aware p_aware ${pAware!==undefined?`= ${(pAware*100).toFixed(1)}%`: '(omitted)'}
-- Base rate p0 = ${(p0*100).toFixed(1)}%
+- Primary probability p_neutral = ${(pNeutral * 100).toFixed(1)}%
+- Secondary market-aware p_aware ${pAware !== undefined ? `= ${(pAware * 100).toFixed(1)}%` : '(omitted)'}
+- Base rate p0 = ${(p0 * 100).toFixed(1)}%
 - Prediction: ${predictionDirection} (${confidence.toFixed(1)}% confidence)
 - Key drivers: ${drivers.join('; ') || 'n/a'}
 
-MOST INFLUENTIAL EVIDENCE:
-Supporting Evidence (polarity +1):
-${proEvidence.map(e => `- ${e.id}: "${e.claim}" (Impact: +${(e.deltaPP*100).toFixed(1)}pp, Type ${e.type})`).join('\n')}
-
-Contradicting Evidence (polarity -1):
-${conEvidence.map(e => `- ${e.id}: "${e.claim}" (Impact: +${(e.deltaPP*100).toFixed(1)}pp, Type ${e.type})`).join('\n')}
+EVIDENCE CATALOG (Most Influential First):
+${catalogLines}
 
 Question: ${question}
 
 FORMAT REQUIREMENTS:
 Write a structured report with these sections:
 
-## Prediction: ${predictionDirection} (${(pNeutral*100).toFixed(1)}%)
+## Prediction: ${predictionDirection} (${(pNeutral * 100).toFixed(1)}%)
 
 ## Why This Prediction
-Explain the key reasoning based on the most influential evidence found. Reference specific evidence IDs and summarize their claims. Focus on the evidence that most strongly moved the probability.
+- Summarize the core thesis linking top positive and negative evidence to the posterior shift.
+- Explicitly reference evidence IDs and their Δpp (percentage point contribution) and note any correlation (cluster rho) considerations.
+
+## Evidence Deep Dive
+- For EACH evidence above (in order), include a short paragraph with:
+  - What the evidence says (quote/summary), its type (A–D), date, and source domain.
+  - How it affected the estimate: sign, approximate Δpp, and whether cluster correlation (rho, mEff) reduced its marginal effect.
+  - Quality signals: verifiability, corroborations, and consistency that justify its weight; mention recency where helpful.
 
 ## Key Drivers
-List the main factors that could influence this outcome: ${drivers.slice(0, 3).join(', ')}
+- List the main forward-looking factors (3–5 bullets): ${drivers.slice(0, 5).join(', ')}
 
 ## What Would Change Our Mind
-List 3-4 specific events or evidence types that would significantly shift the probability in either direction.
+- 3–5 specific events, datasets, or outcomes that would materially move the estimate, with notes on direction and likely magnitude.
 
 ## Caveats & Limitations
-Note potential biases, data limitations, or factors that reduce confidence.
+- Note potential biases, sampling issues, correlation or over-reliance on clusters, stale data risks, or disagreement with market/Elo benchmarks if present.
 
-Keep each section concise (2-4 bullet points). Cite evidence IDs, not raw URLs.
+STYLE:
+- Be precise, evidence-driven, and skimmable. Use IDs (e.g., e12) when citing evidence; avoid raw URLs in the body.
+- Keep paragraphs tight; no filler.
 `;
-  const { text } = await generateText({ 
-    model: getModel(), 
-    system: `Write clean, skimmable Markdown only.`, 
-    prompt 
+
+  const { text } = await generateText({
+    model: getModel(),
+    system: `Write clean, skimmable Markdown only.`,
+    prompt,
   });
   return text;
 }
