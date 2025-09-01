@@ -300,8 +300,26 @@ export async function buildLLMPayloadFromSlug(
             })
             .sort((a, b) => (b.volume + b.liquidity) - (a.volume + a.liquidity))
             .slice(0, maxCandidates);
+          // Compute implied probabilities for candidates (best effort)
+          for (const candidate of topCandidates) {
+            try {
+              const candidateTokenMap = extractOutcomeTokens(candidate.market);
+              const candidateTokenIds = Object.values(candidateTokenMap);
+              if (candidateTokenIds.length > 0) {
+                const candidatePrices = await getBestBidAsk([candidateTokenIds[0]]);
+                const price = candidatePrices[candidateTokenIds[0]];
+                if (price?.BUY && price?.SELL) candidate.implied_probability = (price.BUY + price.SELL) / 2;
+                else if (price?.BUY) candidate.implied_probability = price.BUY;
+                else if (price?.SELL) candidate.implied_probability = price.SELL;
+              }
+            } catch {
+              candidate.implied_probability = 0;
+            }
+          }
+          topCandidates.sort((a, b) => (b.implied_probability ?? 0) - (a.implied_probability ?? 0));
           eventSummary = { is_multi_candidate: true, total_markets: allMarkets.length, active_markets: activeMarkets.length, top_candidates: topCandidates };
-          gammaMarket = topCandidates[0]?.market || activeMarkets[0];
+          // Prefer the highest current chance; fallback to activity heuristic if missing
+          gammaMarket = (topCandidates[0]?.implied_probability ?? 0) > 0 ? (topCandidates[0]!.market) : (topCandidates[0]?.market || activeMarkets[0]);
         } else {
           gammaMarket = activeMarkets.reduce((prev: AnyObj, current: AnyObj) => {
             const prevScore = (prev.active ? 1000 : 0) + (extractLiquidity(prev) || 0) + (extractVolume(prev) || 0);
@@ -362,24 +380,7 @@ export async function buildLLMPayloadFromSlug(
     }
   }
 
-  if (eventSummary?.is_multi_candidate && eventSummary.top_candidates) {
-    for (const candidate of eventSummary.top_candidates) {
-      try {
-        const candidateTokenMap = extractOutcomeTokens(candidate.market);
-        const candidateTokenIds = Object.values(candidateTokenMap);
-        if (candidateTokenIds.length > 0) {
-          const candidatePrices = await getBestBidAsk([candidateTokenIds[0]]);
-          const price = candidatePrices[candidateTokenIds[0]];
-          if (price?.BUY && price?.SELL) candidate.implied_probability = (price.BUY + price.SELL) / 2;
-          else if (price?.BUY) candidate.implied_probability = price.BUY;
-          else if (price?.SELL) candidate.implied_probability = price.SELL;
-        }
-      } catch {
-        candidate.implied_probability = 0;
-      }
-    }
-    eventSummary.top_candidates.sort((a, b) => b.implied_probability - a.implied_probability);
-  }
+  // eventSummary already computed above for multi-candidate events (with implied probabilities)
 
   return {
     market_facts: facts,
