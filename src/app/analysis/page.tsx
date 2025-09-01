@@ -107,7 +107,29 @@ function AnalysisContent() {
     })
     .then(async response => {
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Try to get the error message from the response body
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        
+        try {
+          const responseText = await response.text();
+          console.log('Raw response:', responseText); // Debug log
+          
+          if (responseText) {
+            try {
+              const errorData = JSON.parse(responseText);
+              errorMessage = errorData.error || errorMessage;
+            } catch (jsonError) {
+              // If it's not JSON, maybe it's plain text
+              errorMessage = responseText || errorMessage;
+            }
+          }
+        } catch (readError) {
+          console.error('Error reading response body:', readError);
+          // Keep the default errorMessage
+        }
+        
+        console.log('Final error message:', errorMessage); // Debug log
+        throw new Error(errorMessage);
       }
       
       const reader = response.body?.getReader();
@@ -229,6 +251,124 @@ function AnalysisContent() {
   if (!mounted) return null;
 
   if (error) {
+    // Check if this is a rate limit error for anonymous users
+    const isRateLimitError = error.includes('Daily limit exceeded') || error.includes('limited to 1 free analysis');
+    
+    if (isRateLimitError) {
+      return (
+        <div className="min-h-screen bg-black text-white p-4 relative overflow-hidden">
+          {/* Video Background */}
+          <div className="fixed inset-0 w-full h-full z-0">
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+            >
+              <source src="/analysis.webm" type="video/webm" />
+            </video>
+            {/* Dark overlay for better text readability */}
+            <div className="absolute inset-0 bg-black/40"></div>
+          </div>
+          
+          {/* Content overlay */}
+          <div className="relative z-50 flex items-center justify-center min-h-screen">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+              className="text-center max-w-4xl mx-auto"
+            >
+              {/* Main Card */}
+              <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl p-6 mb-6 max-w-2xl mx-auto">
+                {/* Icon */}
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-6 h-6 text-white" />
+                </div>
+                
+                {/* Title */}
+                <h1 className="text-2xl md:text-3xl font-bold text-white mb-3 font-[family-name:var(--font-space)]">
+                  Daily Limit Reached
+                </h1>
+                <p className="text-white/80 mb-4">
+                  Choose your plan to continue analyzing markets
+                </p>
+              </div>
+              
+              {/* Pricing Plans */}
+              <div className="grid md:grid-cols-2 gap-4 mb-6 max-w-2xl mx-auto">
+                {/* Pay Per Use */}
+                <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl p-6 text-center hover:bg-white/25 transition-all cursor-pointer">
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                  </div>
+                  <h3 className="text-white font-semibold text-lg mb-2">Pay Per Use</h3>
+                  <p className="text-white/70 text-sm mb-3">Pay only for what you use</p>
+                  <div className="text-white/90 text-xl font-bold mb-1">~$5 <span className="text-sm font-normal">typical cost</span></div>
+                  <p className="text-white/60 text-xs mb-3">Exact cost based on usage</p>
+                  <ul className="text-white/70 text-sm space-y-1">
+                    <li>✓ Pay actual API costs</li>
+                    <li>✓ No monthly commitment</li>
+                    <li>✓ Transparent pricing</li>
+                  </ul>
+                </div>
+                
+                {/* Subscription */}
+                <div className="bg-gradient-to-br from-purple-500/30 to-blue-500/30 backdrop-blur-sm border border-purple-300/50 rounded-2xl p-6 text-center hover:from-purple-500/40 hover:to-blue-500/40 transition-all cursor-pointer relative">
+                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs px-3 py-1 rounded-full font-semibold">
+                    POPULAR
+                  </div>
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-blue-500 rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                  </div>
+                  <h3 className="text-white font-semibold text-lg mb-2">Unlimited</h3>
+                  <p className="text-white/70 text-sm mb-3">Best value for active traders</p>
+                  <div className="text-white/90 text-xl font-bold mb-3">$29 <span className="text-sm font-normal">per month</span></div>
+                  <ul className="text-white/70 text-sm space-y-1">
+                    <li>✓ Unlimited analyses</li>
+                    <li>✓ Telegram alerts</li>
+                    <li>✓ Event monitoring</li>
+                    <li>✓ Priority support</li>
+                  </ul>
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl p-4 max-w-2xl mx-auto">
+                <div className="flex flex-col sm:flex-row gap-3 justify-center mb-3">
+                  <Button 
+                    onClick={() => router.push('/?plan=subscription')} 
+                    size="default"
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-2 font-semibold border-0"
+                  >
+                    Start Unlimited Plan
+                  </Button>
+                  <Button 
+                    onClick={() => router.push('/?plan=payperuse')} 
+                    variant="outline" 
+                    size="default"
+                    className="border-white/30 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 px-6 py-2"
+                  >
+                    Pay Per Analysis
+                  </Button>
+                </div>
+                
+                {/* Reset Info */}
+                <p className="text-white/60 text-xs text-center">
+                  Free analysis resets daily at midnight • <button onClick={() => router.push('/')} className="underline hover:text-white">Back to Home</button>
+                </p>
+              </div>
+            </motion.div>
+          </div>
+          
+          {/* Bottom fade overlay */}
+          <div className="fixed bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black via-black/50 to-transparent pointer-events-none z-40"></div>
+        </div>
+      );
+    }
+    
+    // Default error state for other errors
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <motion.div
