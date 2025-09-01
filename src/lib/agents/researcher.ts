@@ -44,8 +44,104 @@ const EvidenceItemSchema = z.object({
 });
 
 const EvidenceSchema = z.object({
-  items: z.array(EvidenceItemSchema).min(0).max(5).describe('Array of evidence items found through research')
+  items: z.array(EvidenceItemSchema).min(0).max(10).describe('Array of evidence items found through research (up to 10)')
 });
+
+// URL normalization and evidence deduplication helpers
+function normalizeUrl(raw: string): string | null {
+  try {
+    const u = new URL(raw);
+    // lower-case host and strip www.
+    const host = (u.hostname || '').toLowerCase().replace(/^www\./, '');
+    u.hostname = host;
+    // remove hash
+    u.hash = '';
+    // remove common tracking params
+    const toDelete = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','gclid','fbclid','igsh','mc_cid','mc_eid','ref'];
+    toDelete.forEach(k => u.searchParams.delete(k));
+    // sort params (stable order)
+    const params = Array.from(u.searchParams.entries()).sort(([a],[b]) => a.localeCompare(b));
+    u.search = params.length ? '?' + params.map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&') : '';
+    // remove trailing slash (except root)
+    if (u.pathname !== '/' && u.pathname.endsWith('/')) u.pathname = u.pathname.replace(/\/+$/,'');
+    // remove default ports
+    if ((u.protocol === 'http:' && u.port === '80') || (u.protocol === 'https:' && u.port === '443')) u.port = '';
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
+function hostFromUrl(raw?: string): string | null {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw);
+    return (u.hostname || '').toLowerCase().replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
+function dedupeAndNormalizeEvidence(items: Evidence[]): Evidence[] {
+  const seenUrls = new Set<string>();
+  const hostCounts: Record<string, number> = {};
+  const DOMAIN_CAP = 5;
+  const result: Evidence[] = [];
+  for (const item of items) {
+    const normalizedUrls = (item.urls || [])
+      .map(normalizeUrl)
+      .filter((x): x is string => Boolean(x));
+    // Unique normalized URLs per item
+    const uniqueUrls = Array.from(new Set(normalizedUrls));
+    // Skip if any URL already seen (duplicate source)
+    const isDup = uniqueUrls.some(u => seenUrls.has(u));
+    if (isDup) continue;
+    // Mark URLs as seen
+    uniqueUrls.forEach(u => seenUrls.add(u));
+    // Compute originId from host of first URL if available
+    const originHost = uniqueUrls.length ? hostFromUrl(uniqueUrls[0]) : null;
+    const originId = originHost || item.originId || 'unknown';
+    // Enforce per-domain cap (max DOMAIN_CAP items per domain)
+    if (originHost) {
+      const count = hostCounts[originHost] || 0;
+      if (count >= DOMAIN_CAP) {
+        continue; // skip items beyond cap
+      }
+      hostCounts[originHost] = count + 1;
+    }
+    result.push({
+      ...item,
+      urls: uniqueUrls,
+      originId,
+    });
+  }
+  return result;
+}
+
+// Summarize tool findings to a bounded-length digest to avoid context overflows
+// Side-aware: bias the summary toward the research target (FOR/AGAINST/NEUTRAL)
+async function summarizeFindings(raw: string, maxChars = 2000, question?: string, side?: 'FOR' | 'AGAINST' | 'NEUTRAL'): Promise<string> {
+  try {
+    const seed = raw?.slice(0, Math.min(raw.length, 8000)) || '';
+    const sideDirective = (() => {
+      if (side === 'FOR') {
+        return 'Target: PRO side. Emphasize findings that SUPPORT the outcome. Prioritize directly supportive facts and high-credibility sources. Omit or briefly note contradicting points only if essential.';
+      } else if (side === 'AGAINST') {
+        return 'Target: CON side. Emphasize findings that CONTRADICT the outcome. Prioritize directly disconfirming facts and high-credibility sources. Omit or briefly note supporting points only if essential.';
+      } else {
+        return 'Target: NEUTRAL. Provide a factual, topic-focused summary without taking a side.';
+      }
+    })();
+    const { text } = await generateText({
+      model: getModel(),
+      system: 'You compress research notes into a concise, high-signal summary. Preserve key facts, entities, dates, numbers. No fluff.',
+      prompt: `Question: ${question ?? 'n/a'}\n${sideDirective}\nBe strictly ON-TOPIC to the question. Remove unrelated domains or entities.\nCompress the following research findings into a tight bullet list with short headings. Max ${maxChars} characters.\n\n---\n${seed}`,
+    });
+    return text.slice(0, maxChars);
+  } catch {
+    return (raw || '').slice(0, maxChars);
+  }
+}
 
 function makeResearchPrompt(question: string, plan: { subclaims: string[]; searchSeeds: string[] }, side: 'FOR' | 'AGAINST', marketData?: MarketData) {
   const marketContext = marketData ? `
@@ -67,6 +163,13 @@ Research Process:
 1. Use valyuDeepSearch or valyuWebSearch to find relevant information for each subclaim
 2. Evaluate each piece of evidence for quality and reliability
 3. Return your findings as structured JSON matching the required schema
+
+QUERY CONSTRUCTION RULES (Initial Cycle):
+- DO NOT prefix queries with outlet names (e.g., do not start queries with "Reuters ", "Bloomberg ", "WSJ ").
+- DO NOT use site: filters.
+- Include the current year "2025" in each query to bias toward fresh results.
+- Use natural language with specific entities/contexts from the question and subclaims.
+- Prefer phrasing like "<entity> <topic> 2025 status" over brand-led queries.
 
 ENHANCED Evidence Classification Rules:
 - Type A (2.0 cap): PRIMARY SOURCES
@@ -133,17 +236,18 @@ async function conductResearch(
       }
     });
 
-    // Step 2: Generate structured evidence based on search results
+    // Step 2: Summarize findings to bound context, then generate structured evidence
+    const summarized = await summarizeFindings(searchResult.text, 2000, question, side);
     const evidencePrompt = `Based on your research findings, create structured evidence for the ${side} side.
 
-Research Summary: ${searchResult.text}
+Research Summary (compressed): ${summarized}
 
 CRITICAL REQUIREMENT: ALL evidence must be directly relevant to the question "${question}". 
 - REJECT evidence about unrelated topics (medicine, safety, general statistics)
 - ONLY include evidence specifically about the subject and context in the question
 - If your search found off-topic results, mark them as irrelevant and don't include them
 
-Now create 2-5 evidence items in JSON format matching this schema:
+Now create 4-8 high-quality evidence items in JSON format matching this schema (prioritize Type A/B, recent 2024-2025 sources):
 {
   "items": [
     {
@@ -172,13 +276,14 @@ Return ONLY the JSON object, no other text.`;
       }),
     });
 
-    // Access the structured output and convert polarity strings to numbers
+    // Access the structured output, normalize, and dedupe
     if (structuredResult.experimental_output) {
-      const items = structuredResult.experimental_output.items.map((item: any) => ({
+      const itemsRaw = structuredResult.experimental_output.items.map((item: any) => ({
         ...item,
         polarity: item.polarity === '1' ? 1 : -1 // Convert string to number
       }));
-      return items as Evidence[];
+      const items = dedupeAndNormalizeEvidence(itemsRaw as Evidence[]);
+      return items;
     } else {
       console.warn(`No structured output generated for ${side} research`);
       return [];
@@ -326,6 +431,12 @@ Target Side: ${search.side}
 
 Use the search tools to find specific evidence related to this query. Focus on high-quality, verifiable sources that address the identified gap.
 
+QUERY CONSTRUCTION RULES (Targeted):
+- DO NOT prefix queries with outlet names (e.g., avoid starting with "Reuters ", "Bloomberg ", "WSJ ").
+- DO NOT use site: filters.
+- Consider adding the current year "2025" to queries when freshness is critical.
+- Use natural language with precise entities/contexts from the rationale.
+
 After searching, return 1-3 high-quality evidence items that directly address the search rationale.`;
 
     // Step 1: Use tools to gather information
@@ -339,10 +450,11 @@ After searching, return 1-3 high-quality evidence items that directly address th
       }
     });
 
-    // Step 2: Generate structured evidence based on search results
-    const evidencePrompt = `Based on your targeted research findings, create 1-3 high-quality evidence items.
+    // Step 2: Summarize findings to bound context, then generate structured evidence
+    const summarized = await summarizeFindings(searchResult.text, 2000, question, search.side);
+    const evidencePrompt = `Based on your targeted research findings, create 2-4 high-quality evidence items.
 
-Research Summary: ${searchResult.text}
+Research Summary (compressed): ${summarized}
 Target Side: ${search.side}
 
 Create evidence items in JSON format matching this schema:
@@ -384,13 +496,14 @@ Return ONLY the JSON object, no other text.`;
       }),
     });
 
-    // Access the structured output and convert polarity strings to numbers
+    // Access the structured output, normalize, and dedupe
     if (structuredResult.experimental_output) {
-      const items = structuredResult.experimental_output.items.map((item: any) => ({
+      const itemsRaw = structuredResult.experimental_output.items.map((item: any) => ({
         ...item,
         polarity: search.side === 'NEUTRAL' ? 0 : (item.polarity === '1' ? 1 : -1) // Convert string to number, handle NEUTRAL
       }));
-      return items as Evidence[];
+      const items = dedupeAndNormalizeEvidence(itemsRaw as Evidence[]);
+      return items;
     } else {
       console.warn(`No structured output generated for targeted research: ${search.query}`);
       return [];

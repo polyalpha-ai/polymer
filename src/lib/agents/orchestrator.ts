@@ -249,8 +249,51 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
     });
   }
 
-  // Merge all evidence lists
-  const allEvidence: Evidence[] = [...finalPro, ...finalCon, ...neutralEvidence];
+  // Merge all evidence lists and dedupe by normalized URL to avoid source double-counting
+  function normalizeUrl(raw: string): string | null {
+    try {
+      const u = new URL(raw);
+      const host = (u.hostname || '').toLowerCase().replace(/^www\./, '');
+      u.hostname = host;
+      u.hash = '';
+      const toDelete = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','gclid','fbclid','igsh','mc_cid','mc_eid','ref'];
+      toDelete.forEach(k => u.searchParams.delete(k));
+      const params = Array.from(u.searchParams.entries()).sort(([a],[b]) => a.localeCompare(b));
+      u.search = params.length ? '?' + params.map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&') : '';
+      if (u.pathname !== '/' && u.pathname.endsWith('/')) u.pathname = u.pathname.replace(/\/+$/,'');
+      if ((u.protocol === 'http:' && u.port === '80') || (u.protocol === 'https:' && u.port === '443')) u.port = '';
+      return u.toString();
+    } catch { return null; }
+  }
+  function dedupeByUrl(items: Evidence[]): Evidence[] {
+    const seen = new Set<string>();
+    const hostCounts: Record<string, number> = {};
+    const DOMAIN_CAP = 5;
+    const out: Evidence[] = [];
+    for (const ev of items) {
+      const normalized = (ev.urls || []).map(normalizeUrl).filter((x): x is string => Boolean(x));
+      const unique = Array.from(new Set(normalized));
+      const isDup = unique.some(u => seen.has(u));
+      if (isDup) continue;
+      // Enforce per-domain cap using first URL's host if present
+      let originHost: string | null = null;
+      if (unique.length) {
+        try { originHost = new URL(unique[0]).hostname.toLowerCase().replace(/^www\./,''); } catch {}
+      }
+      if (originHost) {
+        const count = hostCounts[originHost] || 0;
+        if (count >= DOMAIN_CAP) {
+          continue;
+        }
+        hostCounts[originHost] = count + 1;
+      }
+      unique.forEach(u => seen.add(u));
+      out.push({ ...ev, urls: unique.length ? unique : ev.urls });
+    }
+    return out;
+  }
+
+  const allEvidence: Evidence[] = dedupeByUrl([...finalPro, ...finalCon, ...neutralEvidence]);
 
   // Step 8: ENHANCED ANALYSIS - Apply critic feedback to aggregation
   onProgress?.('aggregating', {

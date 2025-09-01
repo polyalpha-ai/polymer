@@ -9,7 +9,8 @@ const getModel = () => getPolarTrackedModel('gpt-5');
 export const PlanSchema = z.object({
   subclaims: z.array(z.string().min(5)).min(2).max(10).describe('Causal factors and pathways that could lead to the outcome'),
   keyVariables: z.array(z.string()).min(2).max(15).describe('Observable indicators and metrics to monitor'),
-  searchSeeds: z.array(z.string()).min(3).max(20).describe('Specific search queries to find relevant information'),
+  // Require exactly 20 search seeds as requested
+  searchSeeds: z.array(z.string()).min(5).max(20).describe('Specific search queries to find relevant information (exactly 20).'),
   decisionCriteria: z.array(z.string()).min(3).max(8).describe('Clear criteria for how to resolve the question')
 });
 
@@ -35,8 +36,9 @@ Break this down into:
   * Health indicators, political signals, economic metrics, institutional changes
   * Things that would change BEFORE the outcome occurs
 
-- searchSeeds: 3-20 specific search queries targeting causal factors
-  * "Xi Jinping health concerns 2025", "CCP leadership changes", "China economic crisis 2025"
+- searchSeeds: 20 specific search queries targeting causal factors
+  * e.g., "Xi Jinping health concerns 2025", "CCP leadership changes", "China economic crisis 2025"
+  * Prefer diversified phrasing, include time qualifiers (e.g., 2025, recent)
   * Focus on searching for drivers, not end states
 
 - decisionCriteria: 3-8 clear criteria for what would constitute evidence of the pathways
