@@ -72,6 +72,14 @@ function AnalysisContent() {
     return match ? match[1] : null;
   }, []);
 
+  const formatSlugTitle = useCallback((slug?: string | null) => {
+    if (!slug) return '';
+    return slug
+      .split('-')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  }, []);
+
   const toggleStepExpanded = useCallback((stepId: string) => {
     setSteps(prev => prev.map(step => 
       step.id === stepId ? { ...step, expanded: !step.expanded } : step
@@ -533,16 +541,31 @@ function AnalysisContent() {
                             )}
                             
                             <div>
-                              <CardTitle className="text-white text-lg font-semibold">
-                                {step.name}
-                              </CardTitle>
-                              <p className="text-white/70 text-sm mt-1 leading-relaxed">
-                                {step.message}
-                              </p>
-                              {step.timestamp && (
-                                <p className="text-white/40 text-xs mt-1">
-                                  {new Date(step.timestamp).toLocaleTimeString()}
-                                </p>
+                              {(['initial_data','complete_data_ready'].includes(step.id)) ? (
+                                <div>
+                                  <CardTitle className="text-white text-lg font-semibold">Polymarket Market</CardTitle>
+                                  {url && (
+                                    <div className="text-white/80 text-sm mt-1">
+                                      <a href={url} target="_blank" rel="noopener noreferrer" className="underline inline-flex items-center gap-1">
+                                        {formatSlugTitle(extractPolymarketSlug(url)) || 'View on Polymarket'} <ExternalLink className="w-3 h-3" />
+                                      </a>
+                                    </div>
+                                  )}
+                                  {step.details?.question && (
+                                    <p className="text-white/70 text-sm mt-1 leading-relaxed">{step.details.question}</p>
+                                  )}
+                                  {step.timestamp && (
+                                    <p className="text-white/40 text-xs mt-1">{new Date(step.timestamp).toLocaleTimeString()}</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <>
+                                  <CardTitle className="text-white text-lg font-semibold">{step.name}</CardTitle>
+                                  <p className="text-white/70 text-sm mt-1 leading-relaxed">{step.message}</p>
+                                  {step.timestamp && (
+                                    <p className="text-white/40 text-xs mt-1">{new Date(step.timestamp).toLocaleTimeString()}</p>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
@@ -587,21 +610,117 @@ function AnalysisContent() {
                       </CardHeader>
                       
                       <AnimatePresence>
-                        {step.expanded && step.details && Object.keys(step.details).length > 0 && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                          >
-                            <CardContent className="pt-0 pb-6">
-                              <div className="bg-black/50 rounded-lg p-6 border border-white/10">
-                                <pre className="whitespace-pre-wrap text-white/80 text-xs leading-relaxed font-mono overflow-x-auto max-h-96 overflow-y-auto">
-                                  {JSON.stringify(step.details, null, 2)}
-                                </pre>
-                              </div>
-                            </CardContent>
-                          </motion.div>
+                        {(['initial_data','complete_data_ready'].includes(step.id)) ? (
+                          step.details && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.3, ease: "easeInOut" }}
+                            >
+                              <CardContent className="pt-0 pb-6">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-white/80 text-sm">
+                                  {typeof step.details.outcomes === 'number' && (
+                                    <div>
+                                      <div className="text-white/60">Outcomes</div>
+                                      <div className="font-semibold">{step.details.outcomes}</div>
+                                    </div>
+                                  )}
+                                  {step.details.interval && (
+                                    <div>
+                                      <div className="text-white/60">Interval</div>
+                                      <div className="font-semibold">{step.details.interval}</div>
+                                    </div>
+                                  )}
+                                  {typeof step.details.historySeries === 'number' && (
+                                    <div>
+                                      <div className="text-white/60">History Series</div>
+                                      <div className="font-semibold">{step.details.historySeries}</div>
+                                    </div>
+                                  )}
+                                  {typeof step.details.volume === 'number' && (
+                                    <div>
+                                      <div className="text-white/60">Volume</div>
+                                      <div className="font-semibold">{step.details.volume.toLocaleString()}</div>
+                                    </div>
+                                  )}
+                                  {typeof step.details.liquidity === 'number' && (
+                                    <div>
+                                      <div className="text-white/60">Liquidity</div>
+                                      <div className="font-semibold">{step.details.liquidity.toLocaleString()}</div>
+                                    </div>
+                                  )}
+                                  {step.details.closeTime && (
+                                    <div>
+                                      <div className="text-white/60">Close Time</div>
+                                      <div className="font-semibold">{new Date(step.details.closeTime).toLocaleString()}</div>
+                                    </div>
+                                  )}
+                                  {step.details.resolutionSource && (
+                                    <div className="col-span-2">
+                                      <div className="text-white/60">Resolution Source</div>
+                                      <div className="font-semibold truncate">{step.details.resolutionSource}</div>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {Array.isArray(step.details.pricesNow) && step.details.pricesNow.length > 0 && (
+                                  <div className="mt-4">
+                                    <div className="text-white/60 text-sm mb-2">Top of Book</div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                      {step.details.pricesNow.map((p:any, idx:number) => (
+                                        <div key={idx} className="text-white/80 text-sm flex justify-between bg-white/5 rounded p-2">
+                                          <span className="truncate mr-2">{p.outcome || 'Outcome'}</span>
+                                          <span className="font-mono">bid {p.bid ?? '-'} | ask {p.ask ?? '-'} | mid {p.mid ?? '-'}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {step.details?.eventSummary?.isMultiCandidate && Array.isArray(step.details.eventSummary.topCandidates) && (
+                                  <div className="mt-4">
+                                    <div className="text-white/60 text-sm mb-2">Top Candidates</div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                      {step.details.eventSummary.topCandidates.map((c:any, idx:number) => (
+                                        <div key={idx} className="text-white/80 text-sm bg-white/5 rounded p-2 flex justify-between">
+                                          <span className="truncate mr-2">{c.name}</span>
+                                          <span className="font-mono">
+                                            {c.implied_probability != null ? `${(c.implied_probability*100).toFixed(1)}%` : '-'}
+                                            {typeof c.volume === 'number' ? ` | vol $${c.volume.toLocaleString()}` : ''}
+                                            {typeof c.liquidity === 'number' ? ` | liq $${c.liquidity.toLocaleString()}` : ''}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {typeof step.details.withBooks !== 'undefined' && (
+                                  <div className="mt-4 text-white/80 text-sm">Order Books: <span className="font-semibold">{String(step.details.withBooks)}</span></div>
+                                )}
+                                {typeof step.details.withTrades !== 'undefined' && (
+                                  <div className="text-white/80 text-sm">Recent Trades: <span className="font-semibold">{String(step.details.withTrades)}</span></div>
+                                )}
+                              </CardContent>
+                            </motion.div>
+                          )
+                        ) : (
+                          step.expanded && step.details && Object.keys(step.details).length > 0 && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.3, ease: "easeInOut" }}
+                            >
+                              <CardContent className="pt-0 pb-6">
+                                <div className="bg-black/50 rounded-lg p-6 border border-white/10">
+                                  <pre className="whitespace-pre-wrap text-white/80 text-xs leading-relaxed font-mono overflow-x-auto max-h-96 overflow-y-auto">
+                                    {JSON.stringify(step.details, null, 2)}
+                                  </pre>
+                                </div>
+                              </CardContent>
+                            </motion.div>
+                          )
                         )}
                       </AnimatePresence>
                     </Card>
@@ -624,6 +743,18 @@ function AnalysisContent() {
                 <CardHeader>
                   <CardTitle className="text-2xl text-white mb-2">Analysis Complete</CardTitle>
                   <p className="text-white/80">{forecast.question}</p>
+                  {url && (
+                    <div className="mt-2">
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-white/80 underline hover:text-white"
+                      >
+                        View on Polymarket <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  )}
                 </CardHeader>
                 
                 <CardContent>

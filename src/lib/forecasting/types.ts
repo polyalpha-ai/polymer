@@ -21,6 +21,9 @@ export interface Evidence {
   corroborationsIndep: number;  // integer
   consistency: number;          // [0,1]
   logLRHint?: number;
+  // Optional fields for adjacent/catalyst reasoning
+  pathway?: string;             // e.g., 'platform-policy', 'release/tour', 'viral', 'award/media', 'regulatory', etc.
+  connectionStrength?: number;  // [0,1] strength of linkage between signal and outcome
 }
 
 export interface ClusterMeta {

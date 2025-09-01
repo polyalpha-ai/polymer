@@ -1,5 +1,5 @@
 import { planAgent } from './planner';
-import { researchBothSides, conductFollowUpResearch } from './researcher';
+import { researchBothSides, conductFollowUpResearch, conductAdjacentResearch } from './researcher';
 import { criticAgent } from './critic';
 import { analystAgent, analystAgentWithCritique, MarketFn } from './analyst';
 import { reporterAgent } from './reporter';
@@ -32,80 +32,120 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
     const { setLLMContext } = await import('../polar-llm-strategy');
     setLLMContext(opts.sessionId || '', opts.customerId);
   }
-  
-  // Step 1: Fetch initial Polymarket data to analyze market characteristics
-  console.log(`🔍 Fetching Polymarket data for slug: ${opts.polymarketSlug}`);
-  onProgress?.('fetch_initial', { 
-    message: 'Fetching Polymarket data...', 
-    slug: opts.polymarketSlug 
-  });
-  
   const t0 = Date.now();
-  
-  // First fetch with default interval to get market info
-  const initialData = await buildLLMPayloadFromSlug(opts.polymarketSlug, {
-    historyInterval: '1d',
-    withBooks: false,
-    withTrades: false,
-  });
-  
-  console.log(
-    `🧠 Initial market facts: question="${initialData.market_facts.question}", outcomes=${Object.keys(initialData.market_facts.token_map ?? {}).length}, historySeries=${initialData.history?.length ?? 0}`
-  );
-  
-  onProgress?.('initial_data', {
-    message: 'Market data retrieved',
-    question: initialData.market_facts.question,
-    outcomes: Object.keys(initialData.market_facts.token_map ?? {}).length,
-    historySeries: initialData.history?.length ?? 0
+
+  // Step 1: Fetch complete market data early (no minimal fetch)
+  onProgress?.('fetch_complete_data', {
+    message: 'Fetching complete market data...',
+    slug: opts.polymarketSlug
   });
 
-  // Step 2: Auto-generate optimal parameters if not provided
+  const firstFetch = await buildLLMPayloadFromSlug(opts.polymarketSlug, {
+    historyInterval: '1d',
+    withBooks: opts.withBooks ?? true,
+    withTrades: opts.withTrades ?? false,
+  });
+
+  onProgress?.('complete_data_ready', {
+    message: 'Complete market data retrieved',
+    reusedInitial: false,
+    interval: '1d',
+    withBooks: opts.withBooks ?? true,
+    withTrades: opts.withTrades ?? false,
+    question: firstFetch.market_facts.question,
+    outcomes: Object.keys(firstFetch.market_facts.token_map ?? {}).length,
+    historySeries: firstFetch.history?.length ?? 0,
+    volume: firstFetch.market_facts.volume ?? null,
+    liquidity: firstFetch.market_facts.liquidity ?? null,
+    closeTime: firstFetch.market_facts.close_time ?? null,
+    resolutionSource: firstFetch.market_facts.resolution_source ?? null,
+    pricesNow: (firstFetch.market_state_now || []).map(x => ({
+      outcome: x.outcome,
+      bid: x.bid, ask: x.ask, mid: x.mid,
+      top_bid_size: (x as any).top_bid_size ?? null,
+      top_ask_size: (x as any).top_ask_size ?? null,
+    })),
+    eventSummary: (firstFetch as any).event_summary ? {
+      isMultiCandidate: (firstFetch as any).event_summary.is_multi_candidate,
+      totalMarkets: (firstFetch as any).event_summary.total_markets,
+      activeMarkets: (firstFetch as any).event_summary.active_markets,
+      topCandidates: (firstFetch as any).event_summary.top_candidates?.map((c:any)=>({
+        name: c.name,
+        implied_probability: c.implied_probability,
+        volume: c.volume,
+        liquidity: c.liquidity,
+        active: c.active,
+      }))
+    } : null
+  });
+
+  // Step 2: Optimize parameters
   onProgress?.('optimize_parameters', {
     message: 'Optimizing analysis parameters...'
   });
-  
-  const optimalInterval = opts.historyInterval || selectOptimalHistoryInterval(initialData);
+
+  const optimalInterval = opts.historyInterval || selectOptimalHistoryInterval(firstFetch);
   const autoDrivers = opts.drivers && opts.drivers.length > 0 
     ? opts.drivers 
-    : await generateDrivers(initialData);
+    : await generateDrivers(firstFetch);
 
-  console.log(`📊 ${explainIntervalChoice(optimalInterval, initialData)}`);
-  console.log(`🎯 Using drivers: ${autoDrivers.join(', ')}`);
-  
   onProgress?.('parameters_optimized', {
     message: 'Parameters optimized',
     interval: optimalInterval,
     drivers: autoDrivers,
-    intervalExplanation: explainIntervalChoice(optimalInterval, initialData)
+    intervalExplanation: explainIntervalChoice(optimalInterval, firstFetch)
   });
 
-  // Step 3: Fetch complete market data with optimal settings
-  if (optimalInterval !== '1d' || opts.withBooks || opts.withTrades) {
-    onProgress?.('fetch_complete_data', {
-      message: 'Fetching complete market data with optimal settings...'
-    });
-  }
-  
-  const marketData = optimalInterval === '1d' && !opts.withBooks && !opts.withTrades
-    ? initialData  // Reuse if settings match
-    : await buildLLMPayloadFromSlug(opts.polymarketSlug, {
-        historyInterval: optimalInterval,
-        withBooks: opts.withBooks ?? true,
-        withTrades: opts.withTrades ?? false,
-      });
-      
+  // Step 3: If needed, refetch with optimal interval
+  const marketData = optimalInterval === '1d'
+    ? firstFetch
+    : await (async () => {
+        onProgress?.('fetch_complete_data', {
+          message: `Refetching market data at interval ${optimalInterval}...`
+        });
+        const refreshed = await buildLLMPayloadFromSlug(opts.polymarketSlug, {
+          historyInterval: optimalInterval,
+          withBooks: opts.withBooks ?? true,
+          withTrades: opts.withTrades ?? false,
+        });
+        onProgress?.('complete_data_ready', {
+          message: 'Complete market data updated',
+          reusedInitial: false,
+          interval: optimalInterval,
+          withBooks: opts.withBooks ?? true,
+          withTrades: opts.withTrades ?? false,
+          question: refreshed.market_facts.question,
+          outcomes: Object.keys(refreshed.market_facts.token_map ?? {}).length,
+          historySeries: refreshed.history?.length ?? 0,
+          volume: refreshed.market_facts.volume ?? null,
+          liquidity: refreshed.market_facts.liquidity ?? null,
+          closeTime: refreshed.market_facts.close_time ?? null,
+          resolutionSource: refreshed.market_facts.resolution_source ?? null,
+          pricesNow: (refreshed.market_state_now || []).map(x => ({
+            outcome: x.outcome,
+            bid: x.bid, ask: x.ask, mid: x.mid,
+            top_bid_size: (x as any).top_bid_size ?? null,
+            top_ask_size: (x as any).top_ask_size ?? null,
+          })),
+          eventSummary: (refreshed as any).event_summary ? {
+            isMultiCandidate: (refreshed as any).event_summary.is_multi_candidate,
+            totalMarkets: (refreshed as any).event_summary.total_markets,
+            activeMarkets: (refreshed as any).event_summary.active_markets,
+            topCandidates: (refreshed as any).event_summary.top_candidates?.map((c:any)=>({
+              name: c.name,
+              implied_probability: c.implied_probability,
+              volume: c.volume,
+              liquidity: c.liquidity,
+              active: c.active,
+            }))
+          } : null
+        });
+        return refreshed;
+      })();
+
   console.log(
-    `📥 Market data ready: reusedInitial=${marketData === initialData}, interval=${optimalInterval}, withBooks=${opts.withBooks ?? true}, withTrades=${opts.withTrades ?? false}`
+    `📥 Market data ready: interval=${optimalInterval}, withBooks=${opts.withBooks ?? true}, withTrades=${opts.withTrades ?? false}`
   );
-  
-  onProgress?.('complete_data_ready', {
-    message: 'Complete market data retrieved',
-    reusedInitial: marketData === initialData,
-    interval: optimalInterval,
-    withBooks: opts.withBooks ?? true,
-    withTrades: opts.withTrades ?? false
-  });
   
   const question = marketData.market_facts.question;
   
@@ -161,17 +201,26 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
   });
   
   console.log(`🔍 === RESEARCH CYCLE 1: Initial Evidence Gathering ===`);
-  const { pro: initialPro, con: initialCon } = await researchBothSides(question, plan, marketData, opts.sessionId);
+  const { pro: initialPro, con: initialCon } = await researchBothSides(question, plan as any, marketData, opts.sessionId);
+  // Adjacent signals batch (smaller than main)
+  const adjacent = await conductAdjacentResearch(question, plan as any, marketData, opts.sessionId);
+  const adjacentPro = adjacent.filter(e => e.polarity > 0);
+  const adjacentCon = adjacent.filter(e => e.polarity < 0);
   console.log(`🔎 Initial research complete: pro=${initialPro.length}, con=${initialCon.length}`);
+  console.log(`🔎 Adjacent signals: pro=${adjacentPro.length}, con=${adjacentCon.length}`);
   
   onProgress?.('initial_research_complete', {
     message: 'Initial evidence research completed',
-    proEvidence: initialPro.length,
-    conEvidence: initialCon.length,
-    urls: [...new Set([...initialPro.flatMap(p => p.urls), ...initialCon.flatMap(c => c.urls)])].slice(0, 10),
+    proEvidence: initialPro.length + adjacentPro.length,
+    conEvidence: initialCon.length + adjacentCon.length,
+    urls: [...new Set([
+      ...initialPro.flatMap(p => p.urls),
+      ...initialCon.flatMap(c => c.urls),
+      ...adjacent.flatMap(a => a.urls),
+    ])].slice(0, 10),
     response: {
-      proEvidence: initialPro.map(e => ({ claim: e.claim, type: e.type, polarity: e.polarity, urls: e.urls })),
-      conEvidence: initialCon.map(e => ({ claim: e.claim, type: e.type, polarity: e.polarity, urls: e.urls }))
+      proEvidence: [...initialPro, ...adjacentPro].map(e => ({ claim: e.claim, type: e.type, polarity: e.polarity, urls: e.urls, pathway: e.pathway, connectionStrength: e.connectionStrength })),
+      conEvidence: [...initialCon, ...adjacentCon].map(e => ({ claim: e.claim, type: e.type, polarity: e.polarity, urls: e.urls, pathway: e.pathway, connectionStrength: e.connectionStrength }))
     }
   });
 
@@ -206,8 +255,8 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
   });
 
   // Step 7: SECOND RESEARCH CYCLE - Targeted follow-up research
-  let finalPro = initialPro;
-  let finalCon = initialCon;
+  let finalPro = [...initialPro, ...adjacentPro];
+  let finalCon = [...initialCon, ...adjacentCon];
   let neutralEvidence: Evidence[] = [];
   
   if (critique.followUpSearches.length > 0) {

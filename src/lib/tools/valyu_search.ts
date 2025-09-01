@@ -35,6 +35,7 @@ const deepSearchInputSchema = z.object({
     .describe(
       'Search domain: "academic" for research papers, "web" for web content, "market" for financial data, "all" for comprehensive search, or "proprietary" for Valyu datasets.'
     ),
+  startDate: z.string().optional().describe('Optional ISO date (YYYY-MM-DD) to filter results published on/after this date'),
 });
 
 // Input schema for web search
@@ -43,6 +44,7 @@ const webSearchInputSchema = z.object({
     .string()
     .min(1)
     .describe("The search query for web content."),
+  startDate: z.string().optional().describe('Optional ISO date (YYYY-MM-DD) to filter results published on/after this date'),
 });
 
 // Tool result type for better type safety
@@ -60,7 +62,7 @@ export const valyuDeepSearchTool = tool({
   description:
     "Search Valyu for real-time academic papers, web content, market data, etc. Use for specific, up-to-date information across various domains. Always cite sources using [Title](URL) format.",
   inputSchema: deepSearchInputSchema,
-  execute: async ({ query, searchType }) => {
+  execute: async ({ query, searchType, startDate }) => {
     const VALYU_API_KEY = process.env.VALYU_API_KEY;
     if (!VALYU_API_KEY) {
       console.error("VALYU_API_KEY is not set.");
@@ -93,10 +95,10 @@ export const valyuDeepSearchTool = tool({
         query,
         {
           searchType: mappedSearchType,
-          maxNumResults: 10,
+          maxNumResults: 8,
           maxPrice: 50.0,
           relevanceThreshold: 0.5,
-          
+          ...(startDate && { startDate }),
         }
       );
 
@@ -123,10 +125,14 @@ export const valyuDeepSearchTool = tool({
         );
       }
       
+      let results = response.results || [];
+      // Note: Date filtering is now handled server-side by the Valyu API using startDate in SearchOptions
+      // Client-side filtering removed since SearchResult doesn't include metadata with date information
+
       const toolResult: ValyuToolResult = {
         success: true,
         query,
-        results: response.results || [],
+        results,
         tx_id: response.tx_id,
         totalCost: cost,
       };
@@ -160,7 +166,7 @@ export const valyuWebSearchTool = tool({
   description:
     "Perform a web search using Valyu for up-to-date information from the internet. Always cite sources using [Title](URL) format.",
   inputSchema: webSearchInputSchema,
-  execute: async ({ query }) => {
+  execute: async ({ query, startDate }) => {
     const VALYU_API_KEY = process.env.VALYU_API_KEY;
     if (!VALYU_API_KEY) {
       console.error("VALYU_API_KEY is not set for web search.");
@@ -181,9 +187,10 @@ export const valyuWebSearchTool = tool({
         query,
         {
           searchType: "web" as ValyuSearchSDKType,
-          maxNumResults: 10,
+          maxNumResults: 8,
           maxPrice: 30.0,
           relevanceThreshold: 0.5,
+          ...(startDate && { startDate }),
         }
       );
       
@@ -210,10 +217,14 @@ export const valyuWebSearchTool = tool({
         );
       }
       
+      let results = response.results || [];
+      // Note: Date filtering is now handled server-side by the Valyu API using startDate in SearchOptions
+      // Client-side filtering removed since SearchResult doesn't include metadata with date information
+
       const toolResult: ValyuToolResult = {
         success: true,
         query,
-        results: response.results || [],
+        results,
         tx_id: response.tx_id,
         totalCost: cost,
       };
