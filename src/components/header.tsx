@@ -216,7 +216,7 @@ export default function Header() {
             transition={{ duration: 0.8, delay: 0.4, ease: 'easeOut' }}
             className='flex items-center gap-0.5 md:gap-1'
           >
-            <ConnectPolymarket />
+            {/* <ConnectPolymarket /> */}
 
 {mounted && user ? (
               <DropdownMenu onOpenChange={(open) => open && fetchAnalysisHistory()}>

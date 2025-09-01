@@ -33,12 +33,18 @@ export async function POST(req: NextRequest) {
       }
     } else {
       // Handle authenticated user
+      console.log('[Forecast API] Authenticated user ID:', user.id)
+      console.log('[Forecast API] User email:', user.email)
+      
       // Get user data including subscription info
-      const { data: fetchedUserData } = await supabase
+      const { data: fetchedUserData, error: fetchError } = await supabase
         .from('users')
         .select('polar_customer_id, subscription_tier, subscription_status, analyses_remaining')
         .eq('id', user.id)
         .single();
+      
+      console.log('[Forecast API] Database query result:', fetchedUserData)
+      console.log('[Forecast API] Database query error:', fetchError)
 
       if (!fetchedUserData) {
         return NextResponse.json(

@@ -45,15 +45,22 @@ export async function checkUsageLimit(userId: string): Promise<{ canProceed: boo
   
   const { data: user } = await supabase
     .from('users')
-    .select('subscription_tier, subscription_status, analyses_remaining')
+    .select('subscription_tier, subscription_status, analyses_remaining, polar_customer_id')
     .eq('id', userId)
     .single()
 
   if (!user) {
+    console.log('[checkUsageLimit] User not found for ID:', userId)
     return { canProceed: false, reason: 'User not found' }
   }
 
+  console.log('[checkUsageLimit] User data:', JSON.stringify(user, null, 2))
+  console.log('[checkUsageLimit] Subscription tier type:', typeof user.subscription_tier)
+  console.log('[checkUsageLimit] Subscription tier value:', `"${user.subscription_tier}"`)
+
+  // Handle subscription tier
   if (user.subscription_tier === 'subscription') {
+    console.log('[checkUsageLimit] Processing subscription user')
     if (user.subscription_status !== 'active') {
       return { canProceed: false, reason: 'Subscription is not active' }
     }
@@ -63,11 +70,27 @@ export async function checkUsageLimit(userId: string): Promise<{ canProceed: boo
     return { canProceed: true }
   }
 
-  if (user.subscription_tier === 'pay_per_use') {
+  // Handle pay-per-use tier - be more flexible with string matching
+  if (user.subscription_tier === 'pay_per_use' || user.subscription_tier?.trim() === 'pay_per_use') {
+    console.log('[checkUsageLimit] Processing pay_per_use user')
+    
+    if (!user.polar_customer_id) {
+      console.log('[checkUsageLimit] No polar_customer_id found')
+      return { canProceed: false, reason: 'Payment method not set up for pay-per-use billing' }
+    }
+    
+    if (user.subscription_status !== 'active') {
+      console.log('[checkUsageLimit] Pay-per-use status not active:', user.subscription_status)
+      return { canProceed: false, reason: 'Pay-per-use billing is not active' }
+    }
+    
+    console.log('[checkUsageLimit] Pay-per-use user validated successfully')
     return { canProceed: true }
   }
 
-  return { canProceed: false, reason: 'No active subscription or payment method' }
+  console.log('[checkUsageLimit] No matching subscription tier found, falling back to error')
+  console.log('[checkUsageLimit] Available tiers: subscription, pay_per_use')
+  return { canProceed: false, reason: `No active subscription or payment method (tier: ${user.subscription_tier})` }
 }
 
 export async function decrementAnalysisCount(userId: string) {
