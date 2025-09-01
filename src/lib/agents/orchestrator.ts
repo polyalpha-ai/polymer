@@ -1,5 +1,5 @@
 import { planAgent } from './planner';
-import { researchBothSides, conductFollowUpResearch } from './researcher';
+import { researchBothSides, conductFollowUpResearch, conductAdjacentResearch } from './researcher';
 import { criticAgent } from './critic';
 import { analystAgent, analystAgentWithCritique, MarketFn } from './analyst';
 import { reporterAgent } from './reporter';
@@ -201,17 +201,26 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
   });
   
   console.log(`🔍 === RESEARCH CYCLE 1: Initial Evidence Gathering ===`);
-  const { pro: initialPro, con: initialCon } = await researchBothSides(question, plan, marketData, opts.sessionId);
+  const { pro: initialPro, con: initialCon } = await researchBothSides(question, plan as any, marketData, opts.sessionId);
+  // Adjacent signals batch (smaller than main)
+  const adjacent = await conductAdjacentResearch(question, plan as any, marketData, opts.sessionId);
+  const adjacentPro = adjacent.filter(e => e.polarity > 0);
+  const adjacentCon = adjacent.filter(e => e.polarity < 0);
   console.log(`🔎 Initial research complete: pro=${initialPro.length}, con=${initialCon.length}`);
+  console.log(`🔎 Adjacent signals: pro=${adjacentPro.length}, con=${adjacentCon.length}`);
   
   onProgress?.('initial_research_complete', {
     message: 'Initial evidence research completed',
-    proEvidence: initialPro.length,
-    conEvidence: initialCon.length,
-    urls: [...new Set([...initialPro.flatMap(p => p.urls), ...initialCon.flatMap(c => c.urls)])].slice(0, 10),
+    proEvidence: initialPro.length + adjacentPro.length,
+    conEvidence: initialCon.length + adjacentCon.length,
+    urls: [...new Set([
+      ...initialPro.flatMap(p => p.urls),
+      ...initialCon.flatMap(c => c.urls),
+      ...adjacent.flatMap(a => a.urls),
+    ])].slice(0, 10),
     response: {
-      proEvidence: initialPro.map(e => ({ claim: e.claim, type: e.type, polarity: e.polarity, urls: e.urls })),
-      conEvidence: initialCon.map(e => ({ claim: e.claim, type: e.type, polarity: e.polarity, urls: e.urls }))
+      proEvidence: [...initialPro, ...adjacentPro].map(e => ({ claim: e.claim, type: e.type, polarity: e.polarity, urls: e.urls, pathway: e.pathway, connectionStrength: e.connectionStrength })),
+      conEvidence: [...initialCon, ...adjacentCon].map(e => ({ claim: e.claim, type: e.type, polarity: e.polarity, urls: e.urls, pathway: e.pathway, connectionStrength: e.connectionStrength }))
     }
   });
 
@@ -246,8 +255,8 @@ export async function runPolymarketForecastPipeline(opts: PolymarketOrchestrator
   });
 
   // Step 7: SECOND RESEARCH CYCLE - Targeted follow-up research
-  let finalPro = initialPro;
-  let finalCon = initialCon;
+  let finalPro = [...initialPro, ...adjacentPro];
+  let finalCon = [...initialCon, ...adjacentCon];
   let neutralEvidence: Evidence[] = [];
   
   if (critique.followUpSearches.length > 0) {

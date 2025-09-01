@@ -14,7 +14,9 @@ export const PlanSchema = z.object({
   recency: z.object({
     needed: z.boolean().describe('Whether strict recency (2024–2025) is critical to answer this question'),
     startDate: z.string().optional().describe('ISO date (YYYY-MM-DD) to use as start date when filtering results if needed')
-  }).describe('Recency guidance for search queries and filtering')
+  }).describe('Recency guidance for search queries and filtering'),
+  adjacentEventTypes: z.array(z.string()).min(4).max(10).describe('General adjacent signal types to monitor (e.g., platform-policy changes, regulatory, awards/media, viral trends, distribution changes)'),
+  adjacentSeeds: z.array(z.string()).min(6).max(12).describe('Smaller adjacent batch of queries targeting catalysts/competitors/platform changes (6-12)')
 });
 
 export type Plan = z.infer<typeof PlanSchema>;
@@ -47,6 +49,9 @@ Break this down into:
 - decisionCriteria: 3-8 clear criteria for what would constitute evidence of the pathways
 
 - recency: Decide if strict recency is required (e.g., fast-moving markets/current year outcomes). If yes, set needed=true and propose a startDate (ISO, e.g., 2024-06-01). If not, set needed=false and omit startDate.
+
+- adjacentEventTypes: 4-10 general catalyst categories (e.g., platform-policy changes, regulatory/legal, major media/awards/PR, viral social trends, product/platform launches, outages, pricing, macro shocks) that could affect the outcome indirectly.
+- adjacentSeeds: 6-12 specific queries combining adjacentEventTypes with entities in this domain (competitors, platforms, regulators, markets) and include 2025 when appropriate.
 
 Return JSON matching the schema.`,
   });

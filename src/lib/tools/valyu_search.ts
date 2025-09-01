@@ -95,7 +95,7 @@ export const valyuDeepSearchTool = tool({
         query,
         {
           searchType: mappedSearchType,
-          maxNumResults: 10,
+          maxNumResults: 8,
           maxPrice: 50.0,
           relevanceThreshold: 0.5,
           
@@ -196,7 +196,7 @@ export const valyuWebSearchTool = tool({
         query,
         {
           searchType: "web" as ValyuSearchSDKType,
-          maxNumResults: 10,
+          maxNumResults: 8,
           maxPrice: 30.0,
           relevanceThreshold: 0.5,
         }
