@@ -47,8 +47,8 @@ export default function TermsOfService() {
                 1. Acceptance of Terms
               </h2>
               <p className="leading-relaxed text-neutral-700 dark:text-neutral-300">
-                By accessing or using Polyseer ("Service," "Platform," "we," "us," or "our"), you ("User," "you," or "your") 
-                agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, 
+                By accessing or using Polyseer (&ldquo;Service,&rdquo; &ldquo;Platform,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;), you (&ldquo;User,&rdquo; &ldquo;you,&rdquo; or &ldquo;your&rdquo;) 
+                agree to be bound by these Terms of Service (&ldquo;Terms&rdquo;). If you do not agree to these Terms, 
                 do not use our Service.
               </p>
             </section>
@@ -173,7 +173,7 @@ export default function TermsOfService() {
                   <ul className="space-y-2 pl-6 text-neutral-700 dark:text-neutral-300">
                     <li className="flex items-start">
                       <span className="text-yellow-500 mr-2 mt-2">•</span>
-                      <span>Contain inaccuracies, errors, or "hallucinations"</span>
+                      <span>Contain inaccuracies, errors, or &ldquo;hallucinations&rdquo;</span>
                     </li>
                     <li className="flex items-start">
                       <span className="text-yellow-500 mr-2 mt-2">•</span>
@@ -307,7 +307,7 @@ export default function TermsOfService() {
                     </li>
                     <li className="flex items-start">
                       <span className="text-purple-500 mr-2 mt-2">•</span>
-                      <span>All activities on third-party platforms are governed by those platforms' terms</span>
+                      <span>All activities on third-party platforms are governed by those platforms&rsquo; terms</span>
                     </li>
                     <li className="flex items-start">
                       <span className="text-purple-500 mr-2 mt-2">•</span>
@@ -367,7 +367,7 @@ export default function TermsOfService() {
                     7.1 Disclaimer of Warranties
                   </h3>
                   <p className="leading-relaxed text-neutral-700 dark:text-neutral-300">
-                    THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, 
+                    THE SERVICE IS PROVIDED &ldquo;AS IS&rdquo; AND &ldquo;AS AVAILABLE&rdquo; WITHOUT WARRANTIES OF ANY KIND, 
                     EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, 
                     FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT.
                   </p>
