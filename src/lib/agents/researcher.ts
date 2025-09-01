@@ -47,6 +47,15 @@ const EvidenceSchema = z.object({
   items: z.array(EvidenceItemSchema).min(0).max(10).describe('Array of evidence items found through research (up to 10)')
 });
 
+function isRecentEnough(dateStr?: string): boolean {
+  if (!dateStr) return false;
+  const t = Date.parse(dateStr);
+  if (Number.isNaN(t)) return false;
+  // Strict cutoff: only keep evidence from 2024-01-01 onward
+  const cutoff = Date.parse('2024-01-01T00:00:00Z');
+  return t >= cutoff;
+}
+
 // URL normalization and evidence deduplication helpers
 function normalizeUrl(raw: string): string | null {
   try {
@@ -143,13 +152,19 @@ async function summarizeFindings(raw: string, maxChars = 2000, question?: string
   }
 }
 
-function makeResearchPrompt(question: string, plan: { subclaims: string[]; searchSeeds: string[] }, side: 'FOR' | 'AGAINST', marketData?: MarketData) {
+type ResearchPlan = { subclaims: string[]; searchSeeds: string[]; recency?: { needed: boolean; startDate?: string } };
+
+function makeResearchPrompt(question: string, plan: ResearchPlan, side: 'FOR' | 'AGAINST', marketData?: MarketData) {
   const marketContext = marketData ? `
 Market Context:
 - Current market price: ${marketData.market_state_now[0]?.mid ? (marketData.market_state_now[0].mid * 100).toFixed(1) + '%' : 'N/A'}
 - Volume: $${marketData.market_facts.volume?.toLocaleString() || 'N/A'}
 - Liquidity: $${marketData.market_facts.liquidity?.toLocaleString() || 'N/A'}
 ` : '';
+
+  const recencyBlock = plan.recency?.needed
+    ? `\nRECENCY SETTINGS:\n- Use startDate=${plan.recency.startDate || '2024-01-01'} in tool calls (valyuDeepSearch/valyuWebSearch) when supported.\n- Strictly prefer 2024–2025 sources; avoid undated/archival items.\n`
+    : '';
 
   return `You are the ${side === 'FOR' ? 'Pro-Researcher' : 'Con-Researcher'}.
 Goal: Find **independent** sources ${side === 'FOR' ? 'supporting' : 'contradicting'} the outcome.
@@ -158,6 +173,7 @@ ${marketContext}
 Question: ${question}
 Subclaims to investigate: ${plan.subclaims.join(' | ')}
 Search seeds: ${plan.searchSeeds.join(' | ')}
+${recencyBlock}
 
 Research Process:
 1. Use valyuDeepSearch or valyuWebSearch to find relevant information for each subclaim
@@ -196,6 +212,10 @@ ENHANCED Evidence Classification Rules:
   * Opinion pieces without supporting data
   * Rumor, speculation, or hearsay
 
+STRICT RECENCY FILTER:
+- Only include sources with publication dates in 2024 or 2025. Exclude older sources.
+- Do NOT include evidence without a clear publication date.
+
 Scoring Guidelines:
 - Verifiability: 1.0 if you can recompute/verify numbers, else estimate 0-1
 - Consistency: Rate internal logical coherence from 0-1
@@ -211,7 +231,7 @@ ALWAYS end your response with valid JSON matching the schema, regardless of sear
 
 async function conductResearch(
   question: string,
-  plan: { subclaims: string[]; searchSeeds: string[] },
+  plan: ResearchPlan,
   side: 'FOR' | 'AGAINST',
   marketData?: MarketData,
   sessionId?: string
@@ -247,7 +267,7 @@ CRITICAL REQUIREMENT: ALL evidence must be directly relevant to the question "${
 - ONLY include evidence specifically about the subject and context in the question
 - If your search found off-topic results, mark them as irrelevant and don't include them
 
-Now create 4-8 high-quality evidence items in JSON format matching this schema (prioritize Type A/B, recent 2024-2025 sources):
+Now create 4-8 high-quality evidence items in JSON format matching this schema (prioritize Type A/B; ONLY 2024-2025 sources):
 {
   "items": [
     {
@@ -255,6 +275,7 @@ Now create 4-8 high-quality evidence items in JSON format matching this schema (
       "claim": "string", 
       "polarity": "${side === 'FOR' ? '1' : '-1'}",
       "type": "A|B|C|D",
+      "publishedAt": "YYYY-MM-DD or ISO",
       "urls": ["string"] // or [] if no sources,
       "originId": "string",
       "firstReport": boolean,
@@ -276,13 +297,18 @@ Return ONLY the JSON object, no other text.`;
       }),
     });
 
-    // Access the structured output, normalize, and dedupe
+    // Access the structured output, normalize, dedupe, and enforce recency
     if (structuredResult.experimental_output) {
       const itemsRaw = structuredResult.experimental_output.items.map((item: any) => ({
         ...item,
         polarity: item.polarity === '1' ? 1 : -1 // Convert string to number
       }));
-      const items = dedupeAndNormalizeEvidence(itemsRaw as Evidence[]);
+      let items = dedupeAndNormalizeEvidence(itemsRaw as Evidence[]);
+      const before = items.length;
+      items = items.filter(e => isRecentEnough(e.publishedAt));
+      if (before !== items.length) {
+        console.warn(`🚫 Dropped ${before - items.length} old/undated evidence items (kept ${items.length}) for ${side}`);
+      }
       return items;
     } else {
       console.warn(`No structured output generated for ${side} research`);
@@ -298,7 +324,7 @@ Return ONLY the JSON object, no other text.`;
 
 export async function researchBothSides(
   question: string,
-  plan: { subclaims: string[]; searchSeeds: string[] },
+  plan: ResearchPlan,
   marketData?: MarketData,
   sessionId?: string
 ) {
@@ -431,6 +457,10 @@ Target Side: ${search.side}
 
 Use the search tools to find specific evidence related to this query. Focus on high-quality, verifiable sources that address the identified gap.
 
+STRICT RECENCY FILTER:
+- Only include sources with publication dates in 2024 or 2025. Exclude older sources.
+- Do NOT include evidence without a clear publication date.
+
 QUERY CONSTRUCTION RULES (Targeted):
 - DO NOT prefix queries with outlet names (e.g., avoid starting with "Reuters ", "Bloomberg ", "WSJ ").
 - DO NOT use site: filters.
@@ -452,7 +482,7 @@ After searching, return 1-3 high-quality evidence items that directly address th
 
     // Step 2: Summarize findings to bound context, then generate structured evidence
     const summarized = await summarizeFindings(searchResult.text, 2000, question, search.side);
-    const evidencePrompt = `Based on your targeted research findings, create 2-4 high-quality evidence items.
+    const evidencePrompt = `Based on your targeted research findings, create 2-4 high-quality evidence items (ONLY 2024-2025 sources).
 
 Research Summary (compressed): ${summarized}
 Target Side: ${search.side}
@@ -465,6 +495,7 @@ Create evidence items in JSON format matching this schema:
       "claim": "string", 
       "polarity": "${search.side === 'FOR' ? '1' : '-1'}",
       "type": "A|B|C|D",
+      "publishedAt": "YYYY-MM-DD or ISO",
       "urls": ["string"] // or [] if no sources,
       "originId": "string",
       "firstReport": boolean,
@@ -496,13 +527,18 @@ Return ONLY the JSON object, no other text.`;
       }),
     });
 
-    // Access the structured output, normalize, and dedupe
+    // Access the structured output, normalize, dedupe, and enforce recency
     if (structuredResult.experimental_output) {
       const itemsRaw = structuredResult.experimental_output.items.map((item: any) => ({
         ...item,
         polarity: search.side === 'NEUTRAL' ? 0 : (item.polarity === '1' ? 1 : -1) // Convert string to number, handle NEUTRAL
       }));
-      const items = dedupeAndNormalizeEvidence(itemsRaw as Evidence[]);
+      let items = dedupeAndNormalizeEvidence(itemsRaw as Evidence[]);
+      const before = items.length;
+      items = items.filter(e => isRecentEnough(e.publishedAt));
+      if (before !== items.length) {
+        console.warn(`🚫 Dropped ${before - items.length} old/undated evidence items (kept ${items.length}) for ${search.side} follow-up`);
+      }
       return items;
     } else {
       console.warn(`No structured output generated for targeted research: ${search.query}`);
