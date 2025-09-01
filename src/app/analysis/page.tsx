@@ -112,7 +112,6 @@ function AnalysisContent() {
         
         try {
           const responseText = await response.text();
-          console.log('Raw response:', responseText); // Debug log
           
           if (responseText) {
             try {
@@ -124,11 +123,18 @@ function AnalysisContent() {
             }
           }
         } catch (readError) {
-          console.error('Error reading response body:', readError);
           // Keep the default errorMessage
         }
         
-        console.log('Final error message:', errorMessage); // Debug log
+        // Check if this is a rate limit error - handle it gracefully without console error
+        const isRateLimitError = errorMessage.includes('Daily limit exceeded') || errorMessage.includes('limited to 1 free analysis');
+        
+        if (isRateLimitError) {
+          // Set error state directly without throwing to avoid console error
+          setError(errorMessage);
+          return; // Exit early, don't throw
+        }
+        
         throw new Error(errorMessage);
       }
       
