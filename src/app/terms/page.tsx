@@ -534,7 +534,7 @@ export default function TermsOfService() {
                 <ul className="space-y-2 text-neutral-700 dark:text-neutral-300">
                   <li className="flex items-center">
                     <span className="text-blue-500 mr-3">📧</span>
-                    <span>Email: legal@polyseer.xyz</span>
+                    <span>Email: contact@valyu.network</span>
                   </li>
                   <li className="flex items-center">
                     <span className="text-blue-500 mr-3">🌐</span>
