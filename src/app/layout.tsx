@@ -68,7 +68,25 @@ export default function RootLayout({
             
             {/* Fixed Footer Elements */}
             <div className="fixed bottom-0 right-4 z-40 pointer-events-none">
-              <div className="pb-4">
+              <div className="pb-4 flex items-center gap-3">
+                {/* Terms of Service Link */}
+                <div className="relative pointer-events-auto">
+                  <div 
+                    className="absolute -inset-4 rounded-full blur-2xl"
+                    style={{
+                      background: 'radial-gradient(circle, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
+                    }}
+                  ></div>
+                  <div className="relative bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                    <a 
+                      href="/terms" 
+                      className="text-sm text-white/80 hover:text-white/100 font-medium transition-colors underline underline-offset-2"
+                    >
+                      Terms
+                    </a>
+                  </div>
+                </div>
+
                 {/* Not Financial Advice - Far Right */}
                 <div className="relative pointer-events-auto">
                   {/* Background blur effect */}
