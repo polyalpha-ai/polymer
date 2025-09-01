@@ -98,7 +98,7 @@ export const valyuDeepSearchTool = tool({
           maxNumResults: 8,
           maxPrice: 50.0,
           relevanceThreshold: 0.5,
-          
+          ...(startDate && { startDate }),
         }
       );
 
@@ -126,17 +126,8 @@ export const valyuDeepSearchTool = tool({
       }
       
       let results = response.results || [];
-      // Client-side recency filter if startDate provided and metadata contains date
-      if (startDate) {
-        const cutoff = Date.parse(startDate);
-        results = results.filter(r => {
-          const meta = r.metadata || {};
-          const ds = meta.publishedAt || meta.published_at || meta.date || null;
-          if (!ds) return false;
-          const t = Date.parse(ds);
-          return !Number.isNaN(t) && t >= cutoff;
-        });
-      }
+      // Note: Date filtering is now handled server-side by the Valyu API using startDate in SearchOptions
+      // Client-side filtering removed since SearchResult doesn't include metadata with date information
 
       const toolResult: ValyuToolResult = {
         success: true,
@@ -199,6 +190,7 @@ export const valyuWebSearchTool = tool({
           maxNumResults: 8,
           maxPrice: 30.0,
           relevanceThreshold: 0.5,
+          ...(startDate && { startDate }),
         }
       );
       
@@ -226,16 +218,8 @@ export const valyuWebSearchTool = tool({
       }
       
       let results = response.results || [];
-      if (startDate) {
-        const cutoff = Date.parse(startDate);
-        results = results.filter(r => {
-          const meta = r.metadata || {};
-          const ds = meta.publishedAt || meta.published_at || meta.date || null;
-          if (!ds) return false;
-          const t = Date.parse(ds);
-          return !Number.isNaN(t) && t >= cutoff;
-        });
-      }
+      // Note: Date filtering is now handled server-side by the Valyu API using startDate in SearchOptions
+      // Client-side filtering removed since SearchResult doesn't include metadata with date information
 
       const toolResult: ValyuToolResult = {
         success: true,
