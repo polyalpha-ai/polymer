@@ -725,6 +725,28 @@ function AnalysisContent() {
                         {forecast.markdownReport}
                       </ReactMarkdown>
                     </div>
+
+                    {forecast.provenance && forecast.provenance.length > 0 && (
+                      <div className="mt-6">
+                        <h3 className="text-white text-lg font-semibold mb-3">Most Influential Sources</h3>
+                        <ol className="space-y-2 text-sm list-decimal list-inside">
+                          {Array.from(new Set(forecast.provenance)).map((url, idx) => {
+                            let label = url;
+                            try {
+                              const u = new URL(url);
+                              label = `${u.hostname.replace(/^www\./,'')}${u.pathname}`;
+                            } catch {}
+                            return (
+                              <li key={idx} className="text-white/80">
+                                <a href={url} target="_blank" rel="noopener noreferrer" className="underline hover:text-white">
+                                  {label}
+                                </a>
+                              </li>
+                            );
+                          })}
+                        </ol>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )}

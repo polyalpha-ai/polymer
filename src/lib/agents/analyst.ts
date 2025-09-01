@@ -1,5 +1,7 @@
 import { aggregateNeutral, blendMarket } from '../forecasting/aggregator';
 import { Evidence } from '../forecasting/types';
+import { evidenceLogLR, TYPE_CAPS } from '../forecasting/evidence';
+import { clamp } from '../forecasting/math';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { openai } from '@ai-sdk/openai';
@@ -92,6 +94,49 @@ For each evidence item, determine if it's directly relevant to answering the pre
   }
 }
 
+const NicheSchema = z.object({
+  niche: z.array(z.object({
+    id: z.string(),
+    authority: z.number().min(0).max(1),
+    rationale: z.string().describe('Why this source is considered niche-credible for this topic')
+  }))
+});
+
+async function analyzeNicheAuthority(evidence: Evidence[], question: string): Promise<Record<string, number>> {
+  if (evidence.length === 0) return {};
+  const model = openai('gpt-5');
+  try {
+    const list = evidence.map(e => {
+      const domain = e.urls && e.urls.length ? (() => { try { return new URL(e.urls[0]).hostname.replace(/^www\./,''); } catch { return 'unknown'; } })() : 'unknown';
+      return `ID: ${e.id}\nType: ${e.type}\nDomain: ${domain}\nClaim: ${e.claim}`;
+    }).join('\n\n');
+
+    const { object } = await generateObject({
+      model,
+      schema: NicheSchema,
+      system: `You are a domain-savvy assessor. For each evidence item, rate whether the SOURCE appears to be a credible niche/specialist outlet for the TOPIC, not just mainstream brand reputation. Return authority in [0,1].`,
+      prompt: `Question: "${question}"
+
+Assess niche credibility for each evidence source listed. Consider:
+- Domain specificity to the topic/domain of the question (e.g., specialized industry sites, respected orgs, expert-run resources)
+- Track record within the niche (as far as can be inferred)
+- Avoid giving high scores just for mainstream outlets (Reuters/WSJ/AP/etc.) unless the topic is their specific specialty desk.
+- If unclear, assign mid/low authority.
+
+ITEMS:\n\n${list}
+
+Return JSON only.`,
+    });
+
+    const map: Record<string, number> = {};
+    for (const row of object.niche) map[row.id] = row.authority;
+    return map;
+  } catch (err) {
+    console.warn('⚠️ Niche authority analysis failed, skipping:', err);
+    return {};
+  }
+}
+
 export async function analystAgentWithCritique(
   question: string, 
   p0: number, 
@@ -127,15 +172,29 @@ export async function analystAgentWithCritique(
     filteredEvidence = topicFilteredEvidence;
   }
 
-  // Step 3: Apply correlation adjustments from critic
+  // Step 3: Optionally boost niche B/C/D sources
+  const nicheMap = await analyzeNicheAuthority(filteredEvidence, question);
+  const boostedEvidence = filteredEvidence.map(e => {
+    const authority = nicheMap[e.id] ?? 0;
+    if (authority <= 0) return e;
+    if (e.type === 'A') return e; // keep A unchanged
+    const base = evidenceLogLR(e);
+    // Heavier boost for lower-tier types when niche-credible
+    const mult = e.type === 'B' ? 0.20 : e.type === 'C' ? 0.35 : 0.50; // B/C/D
+    const cap = TYPE_CAPS[e.type];
+    const hinted = clamp(base * (1 + mult * authority), -cap, cap);
+    return { ...e, logLRHint: hinted };
+  });
+
+  // Step 4: Apply correlation adjustments from critic
   const adjustedRho = { ...rhoByCluster };
   for (const [clusterId, adjustment] of Object.entries(critique.correlationAdjustments)) {
     adjustedRho[clusterId] = adjustment;
   }
 
-  console.log(`📊 Analyst applying critic feedback: filtered ${evidence.length - filteredEvidence.length} evidence items total, adjusted ${Object.keys(critique.correlationAdjustments).length} correlations`);
+  console.log(`📊 Analyst applying critic feedback: filtered ${evidence.length - filteredEvidence.length} evidence items total, niche-boosted ${Object.keys(nicheMap).length} items, adjusted ${Object.keys(critique.correlationAdjustments).length} correlations`);
 
-  const { pNeutral, influence, clusters } = aggregateNeutral(p0, filteredEvidence, adjustedRho);
+  const { pNeutral, influence, clusters } = aggregateNeutral(p0, boostedEvidence, adjustedRho);
   let pAware: number | undefined;
   
   if (marketFn) {
@@ -143,5 +202,5 @@ export async function analystAgentWithCritique(
     pAware = blendMarket(pNeutral, m.probability, 0.1);
   }
   
-  return { pNeutral, pAware, influence, clusters, filteredEvidence };
+  return { pNeutral, pAware, influence, clusters, filteredEvidence: boostedEvidence };
 }
