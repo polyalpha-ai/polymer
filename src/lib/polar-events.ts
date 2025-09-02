@@ -46,4 +46,64 @@ export class PolarEventTracker {
       throw error;
     }
   }
+
+  async trackDarkModeSwitch(
+    userId: string,
+    customerId: string,
+    sessionId: string,
+    fromTheme: string,
+    toTheme: string,
+    metadata: Record<string, any> = {}
+  ) {
+    try {
+      // Skip tracking in development environment
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[PolarEventTracker] Development mode - would track dark mode switch: ${fromTheme} -> ${toTheme}`);
+        return;
+      }
+
+      if (!customerId) {
+        throw new Error(`No Polar customer ID provided for user ${userId}`);
+      }
+
+      // Fixed pricing: $0.01 per theme switch (1 unit = 1 cent)
+      const billableAmount = 1; // 1 cent
+      
+      // Use Polar SDK events.ingest API
+      await this.polar.events.ingest({
+        events: [{
+          name: 'dark_mode_switcher',
+          customerId: customerId,
+          metadata: {
+            billable_amount: billableAmount,
+            from_theme: fromTheme,
+            to_theme: toTheme,
+            session_id: sessionId,
+            component: 'theme_switcher',
+            user_id: userId,
+            cost_usd: 0.01,
+            timestamp: new Date().toISOString(),
+            ...metadata
+          }
+        }]
+      });
+      
+      console.log(`[PolarEventTracker] Tracked dark mode switch: ${fromTheme} -> ${toTheme} ($0.01) for customer ${customerId}`);
+    } catch (error) {
+      console.error('[PolarEventTracker] Failed to track dark mode switch:', error);
+      throw error;
+    }
+  }
+
+  private async getCustomerIdForUser(userId: string): Promise<string | null> {
+    try {
+      // In a real implementation, you'd query your database here
+      // For now, we'll assume the API caller provides the customer ID
+      // This method exists for future extensibility
+      return null; // Will be handled in the API route
+    } catch (error) {
+      console.error('[PolarEventTracker] Failed to get customer ID:', error);
+      return null;
+    }
+  }
 }
