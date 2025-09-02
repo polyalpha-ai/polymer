@@ -205,12 +205,15 @@ Each piece of evidence receives an influence score based on:
 
 ### Prerequisites
 
+#### For Development Mode
 - **Node.js 18+**
-- **npm/pnpm/yarn**
-- **Supabase account**
-- **Polar account** (for billing)
-- **Valyu API key**
-- **OpenAI API key**
+- **npm/pnpm/yarn** 
+- **Valyu API key** - Get yours at [valyu.network](https://valyu.network)
+- **OpenAI API key** - For GPT-5 access
+
+#### Additional for Production Mode  
+- **Supabase account** - Database and authentication
+- **Polar account** - Billing and subscriptions
 
 ### 1. Clone the Repository
 
@@ -229,11 +232,11 @@ pnpm install
 
 ### 3. Environment Setup
 
-Create `.env.local` and configure the following variables:
+Create `.env.local` and configure the required variables for your mode:
 
-#### 🔐 Core API Keys
+#### 🔐 Core API Keys (Required for Both Modes)
 ```env
-# OpenAI (GPT-5 access required)
+# OpenAI (GPT-4/5 access required)
 OPENAI_API_KEY=sk-...
 
 # Valyu Search Network
@@ -243,22 +246,26 @@ VALYU_API_KEY=vl_...
 POLYMARKET_API_KEY=pm_...
 ```
 
-#### 🏛️ Database & Auth (Supabase)
+#### 🏛️ Database & Auth (Production Mode Only)
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
+
+# Email notifications (optional)
+RESEND_API_KEY=re_...
 ```
 
-#### 💳 Billing & Subscriptions (Polar)
+#### 💳 Billing & Subscriptions (Production Mode Only)
 ```env
 POLAR_ACCESS_TOKEN=polar_...
 POLAR_SUBSCRIPTION_PRODUCT_ID=prod_...
 POLAR_PAY_PER_USE_PRODUCT_ID=prod_...
+POLAR_WEBHOOK_SECRET=whsec_...
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-#### 🧠 Memory System (Optional)
+#### 🧠 Memory System (Optional - Both Modes)
 ```env
 MEMORY_ENABLED=true
 WEAVIATE_URL=https://your-weaviate.weaviate.network
@@ -267,13 +274,18 @@ WEAVIATE_API_KEY=wv_...
 
 #### 🌍 App Configuration
 ```env
+# Development mode: No rate limits, no auth required, use your own API keys
 NEXT_PUBLIC_APP_MODE=development
 NODE_ENV=development
+
+# Production mode: Full auth, rate limits, billing system
+# NEXT_PUBLIC_APP_MODE=production
+# NODE_ENV=production
 ```
 
-### 4. Database Setup
+### 4. Database Setup (Production Mode Only)
 
-Set up your Supabase database with the following tables:
+If you're using production mode, set up your Supabase database with the following tables:
 
 ```sql
 -- Users table with subscription info
@@ -317,13 +329,53 @@ CREATE TABLE analysis_sessions (
 );
 ```
 
-### 5. Run Development Server
+### 5. Choose Your Mode
+
+Polyseer supports two deployment modes:
+
+#### 🔧 **Development Mode** (Default)
+Perfect for developers, researchers, and personal use:
 
 ```bash
+# Set in .env.local
+NEXT_PUBLIC_APP_MODE=development
+
+# Then run
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and start analyzing markets!
+**Features:**
+- ✅ **No rate limits** - Unlimited usage
+- ✅ **No authentication required** - Jump straight to analysis  
+- ✅ **Use your own API keys** - Direct control over costs
+- ✅ **No signup/billing system** - No barriers to entry
+- 🎯 **Perfect for**: Personal research, development, API key holders
+
+#### 🌍 **Production Mode** 
+For hosting a public service with monetization:
+
+```bash
+# Set in .env.local  
+NEXT_PUBLIC_APP_MODE=production
+
+# Ensure all Supabase/Polar variables are configured
+# Then run
+npm run dev
+```
+
+**Features:**
+- 🔐 **Full authentication system** - Secure user management
+- 💳 **Billing integration** - Polar-powered subscriptions  
+- 📊 **Usage tracking** - Rate limits and analytics
+- 🚦 **Tiered access** - Free, pay-per-use, unlimited plans
+- 🎯 **Perfect for**: SaaS deployment, public hosting, monetization
+
+### 6. Start Analyzing
+
+Open [http://localhost:3000](http://localhost:3000) and paste any Polymarket URL to get started!
+
+**Development Mode**: No signup needed - go straight to analysis
+**Production Mode**: Users can sign up or get limited anonymous usage
 
 ---
 
