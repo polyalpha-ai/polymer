@@ -12,7 +12,7 @@ cd polyseer
 npm install
 
 # Create .env.local with:
-# OPENAI_API_KEY=sk-...
+# OPENAI_API_KEY=sk-... # Get from platform.openai.com
 # VALYU_API_KEY=vl_...  # Get from platform.valyu.network
 
 npm run dev
@@ -256,7 +256,7 @@ Create `.env.local` and configure the required variables for your mode:
 # OpenAI (GPT-4/5 access required)
 OPENAI_API_KEY=sk-...
 
-# Valyu Search Network - Get from platform.valyu.network
+# Valyu Search Network
 VALYU_API_KEY=vl_...
 
 # Polymarket (optional, for enhanced data)
@@ -396,54 +396,6 @@ Open [http://localhost:3000](http://localhost:3000) and paste any Polymarket URL
 
 ---
 
-## 🎮 Usage Examples
-
-### Basic Analysis
-```typescript
-import { runPolymarketForecastPipeline } from '@/lib/agents/orchestrator';
-
-const forecast = await runPolymarketForecastPipeline({
-  polymarketSlug: 'will-bitcoin-reach-100k-by-2025',
-  onProgress: (step, details) => {
-    console.log(`${step}: ${details.message}`);
-  }
-});
-
-console.log(`Verdict: ${forecast.pNeutral > 0.5 ? 'YES' : 'NO'}`);
-console.log(`Confidence: ${(Math.abs(forecast.pNeutral - 0.5) * 200).toFixed(1)}%`);
-```
-
-### Custom Research Parameters
-```typescript
-const forecast = await runPolymarketForecastPipeline({
-  polymarketSlug: 'election-outcome-2025',
-  drivers: ['polling data', 'economic indicators', 'campaign funding'],
-  historyInterval: '1h',
-  withBooks: true,
-  rhoByCluster: { 'polling': 0.8, 'economic': 0.6 }
-});
-```
-
----
-
-## 🧪 Testing & Scripts
-
-```bash
-# Test the complete forecast pipeline
-npm run test:forecast
-
-# Test Valyu search integration  
-npm run test:valyu
-
-# Debug driver generation
-npm run debug:drivers
-
-# Simple forecasting demo
-npm run demo:simple
-```
-
----
-
 ## 📊 Agent System Details
 
 ### 🗺️ Planner Agent
@@ -495,22 +447,6 @@ interface Plan {
 
 ---
 
-## 💰 Pricing & Billing
-
-Polyseer uses Polar for transparent usage-based billing:
-
-### Plans
-- **🆓 Free**: Browse and explore (no analysis)
-- **⚡ Pay-per-use**: $5-$10 per analysis (depends on research depth)
-- **🎯 Unlimited**: $100/month for 20 analyses
-
-### Cost Breakdown
-- **Valyu Searches**: $0.01-$2 per search (variable)
-- **GPT-5 Usage**: $0.01-$1 per analysis
-- **Data Processing**: Minimal overhead
-
----
-
 ## 🔒 Security & Privacy
 
 ### Data Protection
@@ -544,12 +480,6 @@ We welcome contributions! Here's how to get started:
 - **Prettier**: Auto-formatting on save
 - **Conventional Commits**: Use semantic commit messages
 
-### Architecture Principles
-- **🧩 Modular agents**: Each agent has a single responsibility
-- **🔄 Async-first**: All operations are non-blocking
-- **🛡️ Type safety**: Full TypeScript coverage
-- **🧪 Testable**: Pure functions where possible
-
 ---
 
 ## 📈 Performance & Scalability
@@ -565,43 +495,6 @@ We welcome contributions! Here's how to get started:
 - **🐛 Error tracking** with detailed logging
 - **⏱️ Performance monitoring** for all agents
 - **💰 Cost tracking** for API usage
-
----
-
-## 🗺️ Roadmap
-
-### Q1 2025
-- [ ] **🔮 Advanced Models**: GPT-5 integration for deeper reasoning
-- [ ] **📱 Mobile App**: React Native companion app  
-- [ ] **🤖 API Access**: Public API for developers
-- [ ] **📊 Analytics Dashboard**: User insights and trends
-
-### Q2 2025  
-- [ ] **🌐 Multi-chain Support**: Expand beyond Polymarket
-- [ ] **🧠 Memory System**: Long-term knowledge retention
-- [ ] **🔄 Real-time Updates**: Live analysis updates
-- [ ] **👥 Team Features**: Collaboration tools
-
-### Q3 2025
-- [ ] **🎯 Custom Models**: Fine-tuned prediction models
-- [ ] **📈 Portfolio Tracking**: Multi-market analysis
-- [ ] **🔌 Integrations**: Discord, Telegram, Slack bots
-- [ ] **🏆 Leaderboards**: Track prediction accuracy
-
----
-
-## 💬 Community & Support
-
-### Get Help
-- **📖 Documentation**: [docs.polyseer.xyz](https://docs.polyseer.xyz)
-- **💬 Discord**: [discord.gg/polyseer](https://discord.gg/polyseer)
-- **🐦 Twitter**: [@polyseer_ai](https://twitter.com/polyseer_ai)
-- **📧 Email**: support@polyseer.xyz
-
-### Stay Updated
-- **📝 Blog**: [blog.polyseer.xyz](https://blog.polyseer.xyz)
-- **📱 Newsletter**: Weekly analysis insights
-- **🎥 YouTube**: Deep-dive tutorials
 
 ---
 
@@ -627,18 +520,11 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ## 🙏 Acknowledgments
 
 ### Powered By
-- **🌐 Valyu Network**: Real-time search intelligence
+- **🌐 Valyu Network**: Real-time search api
 - **🧠 OpenAI GPT-5**: Advanced reasoning capabilities  
 - **📊 Polymarket**: Prediction market data
 - **💾 Supabase**: Backend infrastructure
 - **💳 Polar**: Billing and subscriptions
-
-### Contributors
-- **🏗️ Core Team**: Building the future of prediction
-- **🌍 Community**: Feedback and testing
-- **🔬 Researchers**: Academic contributions
-- **🎨 Designers**: Beautiful user experience
-
 ---
 
 **Ready to see the future? Start analyzing markets at [polyseer.xyz](https://polyseer.xyz) 🔮**
