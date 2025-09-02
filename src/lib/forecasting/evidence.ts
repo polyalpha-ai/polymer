@@ -13,8 +13,8 @@ function recencyScore(iso?: string, now = Date.now()) {
   const ts = Date.parse(iso);
   if (Number.isNaN(ts)) return 0.5;
   const days = Math.max(0, (now - ts) / (1000 * 60 * 60 * 24));
-  // Map recency to [0,1] with half-life ~180 days (6 months)
-  const halfLife = 180;
+  // Map recency to [0,1] with shorter half-life (~120 days) to emphasize freshness
+  const halfLife = 120;
   const score = 1 / (1 + days / halfLife);
   return clamp(score, 0, 1);
 }

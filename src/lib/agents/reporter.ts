@@ -50,6 +50,14 @@ export async function reporterAgent(
     return `- ${e.id} | ${e.polarity > 0 ? '+' : '-'} | Type ${e.type} | Δpp=${(e.deltaPP * 100).toFixed(2)} | logLR=${e.logLR.toFixed(3)} | ver=${e.verifiability.toFixed(2)} | corrInd=${e.corroborationsIndep} | cons=${e.consistency.toFixed(2)} | date=${e.publishedAt} | src=${domain} | ${clusterMeta}\n  Claim: ${e.claim}`;
   }).join('\n');
 
+  const adjacentLines = topEvidenceWithClaims
+    .filter((e: any) => e.pathway || typeof e.connectionStrength === 'number')
+    .map((e: any) => {
+      const cs = typeof e.connectionStrength === 'number' ? e.connectionStrength.toFixed(2) : 'n/a';
+      const pw = e.pathway || 'adjacent';
+      return `- ${e.id} | pathway=${pw} | strength=${cs} | Δpp=${(e.deltaPP * 100).toFixed(2)} | Type ${e.type}\n  Claim: ${e.claim}`;
+    }).join('\n');
+
   const prompt = `
 You are the Reporter. Produce a detailed, skimmable Markdown **Forecast Card** that explains how each evidence item shaped the probability.
 
@@ -79,6 +87,10 @@ Write a structured report with these sections:
   - What the evidence says (quote/summary), its type (A–D), date, and source domain.
   - How it affected the estimate: sign, approximate Δpp, and whether cluster correlation (rho, mEff) reduced its marginal effect.
   - Quality signals: verifiability, corroborations, and consistency that justify its weight; mention recency where helpful.
+
+## Adjacent Signals & Catalysts
+- Summarize non-direct but relevant catalysts (e.g., platform-policy, regulatory/legal, award/media, viral, release/tour, macro, distribution). Use the list below and explain how each affects the posterior via its pathway and connection strength.
+${adjacentLines}
 
 ## Key Drivers
 - List the main forward-looking factors (3–5 bullets): ${drivers.slice(0, 5).join(', ')}

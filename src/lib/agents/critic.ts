@@ -40,6 +40,7 @@ CRITICAL ANALYSIS TASKS:
    - Medical studies, safety research, general statistics unrelated to the specific question
    - Evidence about different people, companies, or contexts than what's being asked
 2. Identify missing evidence types or perspectives that would strengthen the analysis
+3. **RECENCY ENFORCEMENT**: Flag evidence older than 2024-01-01 (or without a clear publication date) for removal and propose replacements from 2024–2025.
 3. Flag potential duplicates by examining originId patterns and claim similarity
 4. Note data quality concerns, selection biases, or methodological issues
 5. Suggest specific follow-up searches to fill critical gaps (max 10)
@@ -54,6 +55,7 @@ FOLLOW-UP SEARCH GUIDELINES:
 - Use broad natural-language keywords tied to the entities and mechanisms in question
 - Balance FOR/AGAINST perspectives
 - Prioritize searches likely to find Type A/B evidence over Type C/D
+ - Prefer sources with explicit publication dates; avoid undated/archival items
 
 CORRELATION ADJUSTMENTS FORMAT:
 - Use originId as key (e.g., "reuters-001", "bloomberg-002")

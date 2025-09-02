@@ -137,6 +137,18 @@ Return JSON only.`,
   }
 }
 
+function pathwayBoost(path?: string): number {
+  if (!path) return 0;
+  const key = path.toLowerCase();
+  if (key.includes('platform') || key.includes('policy') || key.includes('distribution')) return 0.30;
+  if (key.includes('release') || key.includes('tour') || key.includes('product')) return 0.30;
+  if (key.includes('viral')) return 0.20;
+  if (key.includes('award') || key.includes('media')) return 0.15;
+  if (key.includes('regulatory') || key.includes('legal')) return 0.25;
+  if (key.includes('macro') || key.includes('geopolitical')) return 0.20;
+  return 0.10; // mild default for unknown pathways
+}
+
 export async function analystAgentWithCritique(
   question: string, 
   p0: number, 
@@ -186,15 +198,27 @@ export async function analystAgentWithCritique(
     return { ...e, logLRHint: hinted };
   });
 
-  // Step 4: Apply correlation adjustments from critic
+  // Step 4: Apply pathway/connection strength scaling
+  const pathwayScaled = boostedEvidence.map(e => {
+    const strength = typeof e.connectionStrength === 'number' ? Math.max(0, Math.min(1, e.connectionStrength)) : 0;
+    const pBoost = pathwayBoost(e.pathway);
+    if (strength <= 0 && pBoost <= 0) return e;
+    const base = typeof e.logLRHint === 'number' ? e.logLRHint : evidenceLogLR(e);
+    const cap = TYPE_CAPS[e.type];
+    const scale = 1 + pBoost * strength; // up to +30% for strong pathway
+    const hinted = clamp(base * scale, -cap, cap);
+    return { ...e, logLRHint: hinted };
+  });
+
+  // Step 5: Apply correlation adjustments from critic
   const adjustedRho = { ...rhoByCluster };
   for (const [clusterId, adjustment] of Object.entries(critique.correlationAdjustments)) {
     adjustedRho[clusterId] = adjustment;
   }
 
-  console.log(`📊 Analyst applying critic feedback: filtered ${evidence.length - filteredEvidence.length} evidence items total, niche-boosted ${Object.keys(nicheMap).length} items, adjusted ${Object.keys(critique.correlationAdjustments).length} correlations`);
+  console.log(`📊 Analyst applying critic feedback: filtered ${evidence.length - filteredEvidence.length} evidence items total, niche-boosted ${Object.keys(nicheMap).length} items, pathway-scaled ${pathwayScaled.length} items, adjusted ${Object.keys(critique.correlationAdjustments).length} correlations`);
 
-  const { pNeutral, influence, clusters } = aggregateNeutral(p0, boostedEvidence, adjustedRho);
+  const { pNeutral, influence, clusters } = aggregateNeutral(p0, pathwayScaled, adjustedRho);
   let pAware: number | undefined;
   
   if (marketFn) {
@@ -202,5 +226,5 @@ export async function analystAgentWithCritique(
     pAware = blendMarket(pNeutral, m.probability, 0.1);
   }
   
-  return { pNeutral, pAware, influence, clusters, filteredEvidence: boostedEvidence };
+  return { pNeutral, pAware, influence, clusters, filteredEvidence: pathwayScaled };
 }
