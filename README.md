@@ -20,6 +20,8 @@ npm run dev
 
 Open [localhost:3000](http://localhost:3000), paste any Polymarket URL, and get your analysis. No signup required in development mode.
 
+Or, we have a hosted version [here](https://www.polyseer.xyz)
+
 ## What is Polyseer?
 
 Prediction markets tell you what might happen. Polyseer tells you why.
