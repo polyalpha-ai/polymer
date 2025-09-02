@@ -155,6 +155,18 @@ function AnalysisContent() {
       return;
     }
 
+    // Track URL entered event
+    if (typeof window !== 'undefined') {
+      import('@vercel/analytics').then(({ track }) => {
+        track('Analysis Started', { 
+          url: url,
+          slug: slug,
+          userType: user ? 'authenticated' : 'anonymous',
+          tier: user?.subscription_tier || 'anonymous'
+        });
+      });
+    }
+
     // Check anonymous usage limits if user is not authenticated
     if (!user) {
       const { canProceed, reason } = canClientAnonymousUserQuery();
@@ -250,6 +262,18 @@ function AnalysisContent() {
 
     if (event.type === 'error') {
       setError(event.error || 'Unknown error occurred');
+      
+      // Track analysis errors
+      if (typeof window !== 'undefined') {
+        import('@vercel/analytics').then(({ track }) => {
+          track('Analysis Error', { 
+            error: event.error || 'Unknown error',
+            url: url,
+            userType: user ? 'authenticated' : 'anonymous',
+            tier: user?.subscription_tier || 'anonymous'
+          });
+        });
+      }
       return;
     }
 
@@ -258,6 +282,21 @@ function AnalysisContent() {
       setIsComplete(true);
       // Mark all steps as complete
       setSteps(prev => prev.map(step => ({ ...step, status: 'complete' as const })));
+      
+      // Track report completion event
+      if (typeof window !== 'undefined' && event.forecast) {
+        import('@vercel/analytics').then(({ track }) => {
+          track('Report Completed', { 
+            url: url,
+            slug: extractPolymarketSlug(url || ''),
+            userType: user ? 'authenticated' : 'anonymous',
+            tier: user?.subscription_tier || 'anonymous',
+            probability: event.forecast?.pNeutral || 0.5,
+            confidence: Math.abs((event.forecast?.pNeutral || 0.5) - 0.5) * 200,
+            evidenceCount: event.forecast?.evidenceInfluence?.length || 0
+          });
+        });
+      }
       return;
     }
 
@@ -379,9 +418,19 @@ function AnalysisContent() {
 
   if (error) {
     // Check if this is a rate limit error for anonymous users
-    const isRateLimitError = error.includes('Daily limit exceeded') || error.includes('limited to 1 free analysis');
+    const isRateLimitError = error.includes('Daily limit exceeded') || error.includes('limited to 2 free analyses');
     
     if (isRateLimitError) {
+      // Track rate limit hit
+      if (typeof window !== 'undefined') {
+        import('@vercel/analytics').then(({ track }) => {
+          track('Rate Limit Hit', { 
+            userType: user ? 'authenticated' : 'anonymous',
+            tier: user?.subscription_tier || 'anonymous'
+          });
+        });
+      }
+      
       return (
         <div className="min-h-screen bg-black text-white p-4 relative overflow-hidden">
           {/* Video Background */}

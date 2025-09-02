@@ -343,7 +343,18 @@ export default function Header() {
                   
                   {/* Show Subscription only for free users who have never had a Polar account */}
                   {subscriptionTier === 'free' && !hasPolarCustomer && (
-                    <DropdownMenuItem onClick={() => setShowSubscription(true)}>
+                    <DropdownMenuItem onClick={() => {
+                      setShowSubscription(true);
+                      // Track subscription modal open
+                      if (typeof window !== 'undefined') {
+                        import('@vercel/analytics').then(({ track }) => {
+                          track('Subscription Modal Opened', { 
+                            location: 'user_menu',
+                            tier: subscriptionTier 
+                          });
+                        });
+                      }
+                    }}>
                       <CreditCard className="mr-2 h-4 w-4" />
                       Subscription
                     </DropdownMenuItem>
@@ -351,7 +362,17 @@ export default function Header() {
 
                   {/* Show Usage Dashboard for any user with a Polar customer account (including cancelled) */}
                   {hasPolarCustomer && (
-                    <DropdownMenuItem onClick={handleViewUsage} disabled={loadingPortal}>
+                    <DropdownMenuItem onClick={() => {
+                      // Track billing portal click
+                      if (typeof window !== 'undefined') {
+                        import('@vercel/analytics').then(({ track }) => {
+                          track('Usage Dashboard Clicked', { 
+                            tier: subscriptionTier 
+                          });
+                        });
+                      }
+                      handleViewUsage();
+                    }} disabled={loadingPortal}>
                       <BarChart3 className="mr-2 h-4 w-4" />
                       {loadingPortal ? 'Opening Portal...' : 'View Usage & Billing'}
                     </DropdownMenuItem>
@@ -369,7 +390,17 @@ export default function Header() {
                         onChange={setCurrentTheme}
                         requiresSubscription={subscriptionTier === 'free'}
                         hasSubscription={subscriptionTier !== 'free'}
-                        onUpgradeClick={() => setShowSubscription(true)}
+                        onUpgradeClick={() => {
+                          setShowSubscription(true);
+                          // Track dark mode upgrade click
+                          if (typeof window !== 'undefined') {
+                            import('@vercel/analytics').then(({ track }) => {
+                              track('Dark Mode Upgrade Clicked', { 
+                                tier: subscriptionTier 
+                              });
+                            });
+                          }
+                        }}
                         userId={user?.id}
                         sessionId={`session_${Date.now()}`}
                         tier={subscriptionTier}
@@ -419,7 +450,15 @@ export default function Header() {
                 variant='ghost'
                 size='sm'
                 className='text-white/90 hover:text-white hover:bg-white/10 drop-shadow-md text-base px-3 py-1.5'
-                onClick={() => setAuthModalOpen(true)}
+                onClick={() => {
+                  setAuthModalOpen(true);
+                  // Track signup button click
+                  if (typeof window !== 'undefined') {
+                    import('@vercel/analytics').then(({ track }) => {
+                      track('Sign In Button Clicked', { location: 'header' });
+                    });
+                  }
+                }}
               >
                 Sign in
               </Button>
@@ -434,12 +473,34 @@ export default function Header() {
                     <div className="border rounded-lg p-4">
                       <h4 className="font-medium mb-2">Pay Per Use</h4>
                       <p className="text-sm text-gray-600 mb-3">Pay only for what you use with 20% markup on API costs</p>
-                      <Button onClick={() => handleCheckout('pay_per_use')} className="w-full">Get Started</Button>
+                      <Button onClick={() => {
+                        // Track pay-per-use button click
+                        if (typeof window !== 'undefined') {
+                          import('@vercel/analytics').then(({ track }) => {
+                            track('Checkout Started', { 
+                              plan: 'pay_per_use',
+                              tier: subscriptionTier 
+                            });
+                          });
+                        }
+                        handleCheckout('pay_per_use');
+                      }} className="w-full">Get Started</Button>
                     </div>
                     <div className="border rounded-lg p-4">
                       <h4 className="font-medium mb-2">Monthly Subscription</h4>
                       <p className="text-sm text-gray-600 mb-3">$100/month for 20 analyses</p>
-                      <Button onClick={() => handleCheckout('subscription')} className="w-full">Subscribe</Button>
+                      <Button onClick={() => {
+                        // Track subscription button click
+                        if (typeof window !== 'undefined') {
+                          import('@vercel/analytics').then(({ track }) => {
+                            track('Checkout Started', { 
+                              plan: 'subscription',
+                              tier: subscriptionTier 
+                            });
+                          });
+                        }
+                        handleCheckout('subscription');
+                      }} className="w-full">Subscribe</Button>
                     </div>
                   </div>
                   <Button variant="outline" onClick={() => setShowSubscription(false)} className="w-full mt-4">Cancel</Button>

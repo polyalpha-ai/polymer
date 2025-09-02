@@ -44,6 +44,14 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
       if (result.error) {
         setError(result.error.message)
       } else {
+        // Track successful auth event
+        if (typeof window !== 'undefined') {
+          import('@vercel/analytics').then(({ track }) => {
+            track(tab === 'signin' ? 'Sign In Success' : 'Sign Up Success', { 
+              method: 'email'
+            });
+          });
+        }
         onOpenChange(false)
         setEmail('')
         setPassword('')
@@ -63,6 +71,15 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
       const result = await signInWithGoogle()
       if (result.error) {
         setError(result.error.message)
+      } else {
+        // Track successful Google auth
+        if (typeof window !== 'undefined') {
+          import('@vercel/analytics').then(({ track }) => {
+            track('Sign In Success', { 
+              method: 'google'
+            });
+          });
+        }
       }
     } catch (err) {
       setError('An unexpected error occurred')

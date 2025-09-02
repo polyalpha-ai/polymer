@@ -29,6 +29,18 @@ export default function Home() {
   const { user, initialized, refreshUser } = useAuthStore();
   const router = useRouter();
 
+  // Track home page visit
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('@vercel/analytics').then(({ track }) => {
+        track('Home Page Visited', { 
+          userType: user ? 'authenticated' : 'anonymous',
+          tier: user?.subscription_tier || 'anonymous'
+        });
+      });
+    }
+  }, [user?.subscription_tier]);
+
   const handleAnalyze = async (url: string) => {
     // Check if user is authenticated
     if (!user) {
