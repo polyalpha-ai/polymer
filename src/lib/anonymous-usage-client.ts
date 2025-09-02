@@ -1,5 +1,5 @@
 const ANONYMOUS_USAGE_COOKIE = 'polyseer_anonymous_usage'
-const MAX_ANONYMOUS_QUERIES = 1
+const MAX_ANONYMOUS_QUERIES = 2
 
 interface AnonymousUsage {
   lastQuery: string // ISO date string
@@ -38,7 +38,7 @@ export function canClientAnonymousUserQuery(): { canProceed: boolean; reason?: s
   if (usage.count >= MAX_ANONYMOUS_QUERIES) {
     return { 
       canProceed: false, 
-      reason: 'Anonymous users are limited to 1 free analysis per day. Please sign up for unlimited access.' 
+      reason: 'Anonymous users are limited to 2 free analyses per day. Please sign up for unlimited access.' 
     }
   }
   
