@@ -417,8 +417,10 @@ function AnalysisContent() {
   }
 
   if (error) {
-    // Check if this is a rate limit error for anonymous users
-    const isRateLimitError = error.includes('Daily limit exceeded') || error.includes('limited to 2 free analyses');
+    // Check if this is a rate limit error
+    const isAnonymousRateLimit = error.includes('Daily limit exceeded') || error.includes('limited to 2 free analyses');
+    const isSignedInRateLimit = error.includes('Signed-in users get 2 free analyses per day');
+    const isRateLimitError = isAnonymousRateLimit || isSignedInRateLimit;
     
     if (isRateLimitError) {
       // Track rate limit hit
@@ -456,85 +458,153 @@ function AnalysisContent() {
               transition={{ duration: 0.5 }}
               className="text-center max-w-4xl mx-auto"
             >
-              {/* Main Card */}
-              <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl p-6 mb-6 max-w-2xl mx-auto">
-                {/* Icon */}
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <AlertCircle className="w-6 h-6 text-white" />
-                </div>
-                
-                {/* Title */}
-                <h1 className="text-2xl md:text-3xl font-bold text-white mb-3 font-[family-name:var(--font-space)]">
-                  Daily Limit Reached
-                </h1>
-                <p className="text-white/80 mb-4">
-                  Choose your plan to continue analyzing markets
-                </p>
-              </div>
-              
-              {/* Pricing Plans */}
-              <div className="grid md:grid-cols-2 gap-4 mb-6 max-w-2xl mx-auto">
-                {/* Pay Per Use */}
-                <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl p-6 text-center hover:bg-white/25 transition-all cursor-pointer">
-                  <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <div className="w-3 h-3 bg-white rounded-full"></div>
+              {/* Show different UI for signed-in vs anonymous users */}
+              {isSignedInRateLimit ? (
+                /* Signed-in user rate limit UI */
+                <>
+                  {/* Main Card */}
+                  <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl p-6 mb-6 max-w-2xl mx-auto">
+                    {/* Icon */}
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <AlertCircle className="w-6 h-6 text-white" />
+                    </div>
+                    
+                    {/* Title */}
+                    <h1 className="text-2xl md:text-3xl font-bold text-white mb-3 font-[family-name:var(--font-space)]">
+                      You've Used Your Free Analyses
+                    </h1>
+                    <p className="text-white/80 mb-4">
+                      Upgrade to pay-per-use for unlimited access
+                    </p>
                   </div>
-                  <h3 className="text-white font-semibold text-lg mb-2">Pay Per Use</h3>
-                  <p className="text-white/70 text-sm mb-3">Pay only for what you use</p>
-                  <div className="text-white/90 text-xl font-bold mb-1">~$5 <span className="text-sm font-normal">typical cost</span></div>
-                  <p className="text-white/60 text-xs mb-3">Exact cost based on usage</p>
-                  <ul className="text-white/70 text-sm space-y-1">
-                    <li>✓ Pay actual API costs</li>
-                    <li>✓ No monthly commitment</li>
-                    <li>✓ Transparent pricing</li>
-                  </ul>
-                </div>
-                
-                {/* Subscription */}
-                <div className="bg-gradient-to-br from-purple-500/30 to-blue-500/30 backdrop-blur-sm border border-purple-300/50 rounded-2xl p-6 text-center hover:from-purple-500/40 hover:to-blue-500/40 transition-all cursor-pointer relative">
-                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs px-3 py-1 rounded-full font-semibold">
-                    POPULAR
+                  
+                  {/* Pay Per Use Focus */}
+                  <div className="max-w-md mx-auto mb-6">
+                    <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm border border-green-300/30 rounded-2xl p-6 text-center">
+                      <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-lg flex items-center justify-center mx-auto mb-4">
+                        <div className="w-4 h-4 bg-white rounded-full"></div>
+                      </div>
+                      <h3 className="text-white font-semibold text-xl mb-2">Pay Per Use</h3>
+                      <p className="text-white/80 mb-4">Pay only for what you use</p>
+                      <div className="text-white/90 text-2xl font-bold mb-2">~$5 <span className="text-sm font-normal">typical cost</span></div>
+                      <p className="text-white/60 text-sm mb-4">Exact cost based on usage</p>
+                      <ul className="text-white/80 text-sm space-y-2 mb-6">
+                        <li>✓ Pay actual API costs</li>
+                        <li>✓ No monthly commitment</li>
+                        <li>✓ Transparent pricing</li>
+                        <li>✓ Start analyzing immediately</li>
+                      </ul>
+                      <Button 
+                        onClick={() => router.push('/?plan=payperuse')} 
+                        size="lg"
+                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold border-0"
+                      >
+                        Upgrade to Pay-Per-Use
+                      </Button>
+                    </div>
                   </div>
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-blue-500 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                  
+                  {/* Action Buttons */}
+                  <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl p-4 max-w-md mx-auto">
+                    <div className="text-center">
+                      <p className="text-white/60 text-sm mb-3">
+                        Your free analysis resets daily at midnight
+                      </p>
+                      <Button 
+                        onClick={() => router.push('/')} 
+                        variant="outline"
+                        size="sm"
+                        className="border-white/30 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 px-4 py-1"
+                      >
+                        Back to Home
+                      </Button>
+                    </div>
                   </div>
-                  <h3 className="text-white font-semibold text-lg mb-2">Unlimited</h3>
-                  <p className="text-white/70 text-sm mb-3">Best value for active traders</p>
-                  <div className="text-white/90 text-xl font-bold mb-3">$29 <span className="text-sm font-normal">per month</span></div>
-                  <ul className="text-white/70 text-sm space-y-1">
-                    <li>✓ Unlimited analyses</li>
-                    <li>✓ Telegram alerts</li>
-                    <li>✓ Event monitoring</li>
-                    <li>✓ Priority support</li>
-                  </ul>
-                </div>
-              </div>
-              
-              {/* Action Buttons */}
-              <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl p-4 max-w-2xl mx-auto">
-                <div className="flex flex-col sm:flex-row gap-3 justify-center mb-3">
-                  <Button 
-                    onClick={() => router.push('/?plan=subscription')} 
-                    size="default"
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-2 font-semibold border-0"
-                  >
-                    Start Unlimited Plan
-                  </Button>
-                  <Button 
-                    onClick={() => router.push('/?plan=payperuse')} 
-                    variant="outline" 
-                    size="default"
-                    className="border-white/30 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 px-6 py-2"
-                  >
-                    Pay Per Analysis
-                  </Button>
-                </div>
-                
-                {/* Reset Info */}
-                <p className="text-white/60 text-xs text-center">
-                  Free analysis resets daily at midnight • <button onClick={() => router.push('/')} className="underline hover:text-white">Back to Home</button>
-                </p>
-              </div>
+                </>
+              ) : (
+                /* Anonymous user rate limit UI */
+                <>
+                  {/* Main Card */}
+                  <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl p-6 mb-6 max-w-2xl mx-auto">
+                    {/* Icon */}
+                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <AlertCircle className="w-6 h-6 text-white" />
+                    </div>
+                    
+                    {/* Title */}
+                    <h1 className="text-2xl md:text-3xl font-bold text-white mb-3 font-[family-name:var(--font-space)]">
+                      Daily Limit Reached
+                    </h1>
+                    <p className="text-white/80 mb-4">
+                      Choose your plan to continue analyzing markets
+                    </p>
+                  </div>
+                  
+                  {/* Pricing Plans */}
+                  <div className="grid md:grid-cols-2 gap-4 mb-6 max-w-2xl mx-auto">
+                    {/* Pay Per Use */}
+                    <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl p-6 text-center hover:bg-white/25 transition-all cursor-pointer">
+                      <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-lg flex items-center justify-center mx-auto mb-3">
+                        <div className="w-3 h-3 bg-white rounded-full"></div>
+                      </div>
+                      <h3 className="text-white font-semibold text-lg mb-2">Pay Per Use</h3>
+                      <p className="text-white/70 text-sm mb-3">Pay only for what you use</p>
+                      <div className="text-white/90 text-xl font-bold mb-1">~$5 <span className="text-sm font-normal">typical cost</span></div>
+                      <p className="text-white/60 text-xs mb-3">Exact cost based on usage</p>
+                      <ul className="text-white/70 text-sm space-y-1">
+                        <li>✓ Pay actual API costs</li>
+                        <li>✓ No monthly commitment</li>
+                        <li>✓ Transparent pricing</li>
+                      </ul>
+                    </div>
+                    
+                    {/* Subscription */}
+                    <div className="bg-gradient-to-br from-purple-500/30 to-blue-500/30 backdrop-blur-sm border border-purple-300/50 rounded-2xl p-6 text-center hover:from-purple-500/40 hover:to-blue-500/40 transition-all cursor-pointer relative">
+                      <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs px-3 py-1 rounded-full font-semibold">
+                        POPULAR
+                      </div>
+                      <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-blue-500 rounded-lg flex items-center justify-center mx-auto mb-3">
+                        <div className="w-3 h-3 bg-white rounded-full"></div>
+                      </div>
+                      <h3 className="text-white font-semibold text-lg mb-2">Unlimited</h3>
+                      <p className="text-white/70 text-sm mb-3">Best value for active traders</p>
+                      <div className="text-white/90 text-xl font-bold mb-3">$29 <span className="text-sm font-normal">per month</span></div>
+                      <ul className="text-white/70 text-sm space-y-1">
+                        <li>✓ Unlimited analyses</li>
+                        <li>✓ Telegram alerts</li>
+                        <li>✓ Event monitoring</li>
+                        <li>✓ Priority support</li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl p-4 max-w-2xl mx-auto">
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center mb-3">
+                      <Button 
+                        onClick={() => router.push('/?plan=subscription')} 
+                        size="default"
+                        className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-2 font-semibold border-0"
+                      >
+                        Start Unlimited Plan
+                      </Button>
+                      <Button 
+                        onClick={() => router.push('/?plan=payperuse')} 
+                        variant="outline" 
+                        size="default"
+                        className="border-white/30 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 px-6 py-2"
+                      >
+                        Pay Per Analysis
+                      </Button>
+                    </div>
+                    
+                    {/* Reset Info */}
+                    <p className="text-white/60 text-xs text-center">
+                      Free analysis resets daily at midnight • <button onClick={() => router.push('/')} className="underline hover:text-white">Back to Home</button>
+                    </p>
+                  </div>
+                </>
+              )}
             </motion.div>
           </div>
           

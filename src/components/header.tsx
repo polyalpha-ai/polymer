@@ -472,7 +472,7 @@ export default function Header() {
                   <div className="space-y-4">
                     <div className="border rounded-lg p-4">
                       <h4 className="font-medium mb-2">Pay Per Use</h4>
-                      <p className="text-sm text-gray-600 mb-3">Pay only for what you use with 20% markup on API costs</p>
+                      <p className="text-sm text-gray-600 mb-3">Pay only for what you use</p>
                       <Button onClick={() => {
                         // Track pay-per-use button click
                         if (typeof window !== 'undefined') {

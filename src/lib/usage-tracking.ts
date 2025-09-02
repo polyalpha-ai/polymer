@@ -93,8 +93,27 @@ export async function checkUsageLimit(userId: string): Promise<{ canProceed: boo
     return { canProceed: true }
   }
 
+  // Handle signed-in users without subscription (free tier) - use cookie-based limit
+  if (user.subscription_tier === 'free' || !user.subscription_tier) {
+    console.log('[checkUsageLimit] Processing signed-in free user with cookie-based limit')
+    
+    // Import the anonymous usage functions to reuse the cookie logic
+    const { canAnonymousUserQuery } = await import('@/lib/anonymous-usage')
+    const cookieResult = await canAnonymousUserQuery()
+    
+    if (!cookieResult.canProceed) {
+      // Return a specific reason for signed-in users who hit the limit
+      return { 
+        canProceed: false, 
+        reason: 'Signed-in users get 2 free analyses per day. Upgrade to pay-per-use for unlimited access.' 
+      }
+    }
+    
+    return { canProceed: true }
+  }
+
   console.log('[checkUsageLimit] No matching subscription tier found, falling back to error')
-  console.log('[checkUsageLimit] Available tiers: subscription, pay_per_use')
+  console.log('[checkUsageLimit] Available tiers: subscription, pay_per_use, free')
   return { canProceed: false, reason: `No active subscription or payment method (tier: ${user.subscription_tier})` }
 }
 

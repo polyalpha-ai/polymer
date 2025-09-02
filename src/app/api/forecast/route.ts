@@ -119,9 +119,17 @@ export async function POST(req: NextRequest) {
           // Send initial connection event
           sendEvent({ type: 'connected', message: 'Starting analysis...', sessionId });
 
-          // Decrement analysis count for subscription users (skip for anonymous)
-          if (!isAnonymous && user && userData.subscription_tier === 'subscription') {
-            await decrementAnalysisCount(user.id);
+          // Handle usage tracking based on user type
+          if (!isAnonymous && user) {
+            if (userData.subscription_tier === 'subscription') {
+              // Decrement analysis count for subscription users
+              await decrementAnalysisCount(user.id);
+            } else if (userData.subscription_tier === 'free' || !userData.subscription_tier) {
+              // For signed-in free users, increment cookie usage like anonymous users
+              await incrementAnonymousUsage();
+              console.log(`[Forecast] Signed-in free user used cookie-based daily query`);
+            }
+            // Pay-per-use users don't need upfront usage tracking
           }
 
           // Create progress callback for the orchestrator

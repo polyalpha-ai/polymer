@@ -21,7 +21,7 @@ export class PolarEventTracker {
     metadata: Record<string, any> = {}
   ) {
     try {
-      const markedUpCost = costDollars * 1.2; // 20% markup
+      const markedUpCost = costDollars * 1.2;
       
       // Use Polar SDK events.ingest API
       await this.polar.events.ingest({
@@ -29,7 +29,7 @@ export class PolarEventTracker {
           name: 'valyu_api_usage',
           customerId: customerId,
           metadata: {
-            billable_amount: Math.ceil(markedUpCost * 100), // Convert to cents with 20% markup
+            billable_amount: Math.ceil(markedUpCost * 100),
             user_id: userId,
             search_type: searchType,
             original_cost: costDollars,
