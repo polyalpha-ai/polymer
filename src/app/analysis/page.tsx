@@ -471,7 +471,7 @@ function AnalysisContent() {
                     
                     {/* Title */}
                     <h1 className="text-2xl md:text-3xl font-bold text-white mb-3 font-[family-name:var(--font-space)]">
-                      You've Used Your Free Analyses
+                      You&apos;ve Used Your Free Analyses
                     </h1>
                     <p className="text-white/80 mb-4">
                       Upgrade to pay-per-use for unlimited access
