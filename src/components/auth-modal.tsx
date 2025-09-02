@@ -23,6 +23,12 @@ export function AuthModal({ open, onOpenChange, defaultTab = 'signin' }: AuthMod
   const [isLoading, setIsLoading] = useState(false)
   const [tab, setTab] = useState(defaultTab)
 
+  // Hide auth modal in development mode
+  const isDevelopment = process.env.NEXT_PUBLIC_APP_MODE === 'development'
+  if (isDevelopment) {
+    return null
+  }
+
   const { signIn, signUp, signInWithGoogle } = useAuthStore()
 
   const handleSubmit = async (e: React.FormEvent) => {

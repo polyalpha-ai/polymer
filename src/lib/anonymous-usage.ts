@@ -24,6 +24,11 @@ export async function getAnonymousUsage(): Promise<AnonymousUsage> {
 }
 
 export async function canAnonymousUserQuery(): Promise<{ canProceed: boolean; reason?: string }> {
+  // In development mode, allow unlimited usage
+  if (process.env.NEXT_PUBLIC_APP_MODE === 'development') {
+    return { canProceed: true }
+  }
+
   const usage = await getAnonymousUsage()
   const today = new Date().toISOString().split('T')[0] // Get YYYY-MM-DD
   

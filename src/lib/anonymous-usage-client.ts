@@ -28,6 +28,11 @@ export function getClientAnonymousUsage(): AnonymousUsage {
 }
 
 export function canClientAnonymousUserQuery(): { canProceed: boolean; reason?: string } {
+  // In development mode, allow unlimited usage
+  if (process.env.NEXT_PUBLIC_APP_MODE === 'development') {
+    return { canProceed: true }
+  }
+
   const usage = getClientAnonymousUsage()
   const today = new Date().toISOString().split('T')[0]
   

@@ -68,6 +68,7 @@ export default function Header() {
   const subscriptionStatus = user?.subscription_status || 'inactive';
   const analysesRemaining = user?.analyses_remaining || 0;
   const hasPolarCustomer = !!user?.polar_customer_id;
+  const isDevelopment = process.env.NEXT_PUBLIC_APP_MODE === 'development';
   
   const tier = subscriptionTier === 'pay_per_use' ? 'Pay-per-use' : 
                subscriptionTier === 'subscription' ? 'Unlimited' : 
@@ -413,7 +414,7 @@ export default function Header() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-) : mounted ? (
+) : mounted && !isDevelopment ? (
               <Button
                 variant='ghost'
                 size='sm'
