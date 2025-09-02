@@ -122,10 +122,42 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       signOut: async () => {
+        console.log('[Auth Store] signOut called')
         const supabase = createClient()
-        const result = await supabase.auth.signOut()
-        set({ user: null })
-        return result
+        
+        try {
+          console.log('[Auth Store] Calling supabase.auth.signOut()')
+          
+          // Add timeout to prevent hanging
+          const timeoutPromise = new Promise<{ error: Error }>((_, reject) => {
+            setTimeout(() => reject(new Error('Sign out timeout')), 5000)
+          })
+          
+          const signOutPromise = supabase.auth.signOut()
+          
+          const result = await Promise.race([signOutPromise, timeoutPromise])
+          console.log('[Auth Store] signOut result:', result)
+          
+          return result
+        } catch (error) {
+          console.error('[Auth Store] signOut error:', error)
+          
+          // If signOut fails or times out, manually clear the state
+          console.log('[Auth Store] Manually clearing auth state due to error')
+          set({ user: null })
+          
+          // Also manually clear session storage
+          if (typeof window !== 'undefined') {
+            try {
+              window.sessionStorage.removeItem('auth-storage')
+              console.log('[Auth Store] Cleared session storage')
+            } catch (storageError) {
+              console.error('[Auth Store] Failed to clear session storage:', storageError)
+            }
+          }
+          
+          return { error }
+        }
       },
 
       refreshUser: async () => {
@@ -196,109 +228,31 @@ export const useAuthStore = create<AuthStore>()(
             // Clear timeout since we got an auth update
             if (timeoutId) clearTimeout(timeoutId)
             
-            if (session?.user) {
-              console.log('[Auth State Change] User detected, fetching data...')
-              
-              // Set basic user immediately
-              set({ 
-                user: session.user as AuthUser,
-                loading: false 
-              })
-              
-              // Then fetch subscription data using server action
-              try {
-                console.log('[Auth State Change] Fetching user data via server action for:', session.user.id)
-                
-                const userData = await getUserData(session.user.id)
-                
-                console.log('[Auth State Change] Server action returned:', userData)
-                
-                if (userData) {
-                  console.log('[Auth State Change] Got user data:', userData)
-                  console.log('[Auth State Change] Subscription from DB:', {
-                    tier: userData.subscription_tier,
-                    status: userData.subscription_status
-                  })
-                  
-                  set({ 
-                    user: {
-                      ...session.user,
-                      subscription_tier: userData.subscription_tier,
-                      subscription_status: userData.subscription_status,
-                      analyses_remaining: userData.analyses_remaining,
-                      polar_customer_id: userData.polar_customer_id
-                    } as AuthUser
-                  })
-                  
-                  // Verify update
-                  const updated = get().user
-                  console.log('[Auth State Change] After set:', {
-                    tier: updated?.subscription_tier,
-                    status: updated?.subscription_status
-                  })
-                } else {
-                  console.log('[Auth State Change] No user data found in DB')
-                  // If no user exists, create one
-                  console.log('[Auth State Change] User not in DB, creating...')
-                  const { data: newUser, error: createError } = await supabase
-                    .from('users')
-                    .insert({
-                      id: session.user.id,
-                      email: session.user.email,
-                      full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-                      avatar_url: session.user.user_metadata?.avatar_url,
-                      subscription_tier: 'free',
-                      subscription_status: 'inactive'
-                    })
-                    .select()
-                    .single()
-                  
-                  if (createError) {
-                    console.error('[Auth State Change] Error creating user:', createError)
-                  } else {
-                    console.log('[Auth State Change] Created user:', newUser)
-                    // Fetch the created user data
-                    const createdUserData = await getUserData(session.user.id)
-                    if (createdUserData) {
-                      set({ 
-                        user: {
-                          ...session.user,
-                          subscription_tier: createdUserData.subscription_tier,
-                          subscription_status: createdUserData.subscription_status,
-                          analyses_remaining: createdUserData.analyses_remaining,
-                          polar_customer_id: createdUserData.polar_customer_id
-                        } as AuthUser
-                      })
-                    }
-                  }
-                }
-              } catch (err) {
-                console.error('[Auth State Change] Exception fetching user data:', err)
+            // Always set the user state based on session
+            set({ 
+              user: session?.user ? { ...session.user } as AuthUser : null,
+              loading: false 
+            })
+
+            // Handle sign out event
+            if (event === 'SIGNED_OUT') {
+              console.log('[Auth Store] User signed out, clearing all data')
+              // Dispatch custom event to notify other parts of the app
+              if (typeof window !== 'undefined') {
+                setTimeout(() => {
+                  const signOutEvent = new CustomEvent('auth:signout')
+                  window.dispatchEvent(signOutEvent)
+                }, 100)
               }
-              
-              // Handle sign in event - create user profile if needed
-              if (event === 'SIGNED_IN') {
-                console.log('[Auth State Change] Handling SIGNED_IN event')
-                try {
-                  await supabase
-                    .from('users')
-                    .upsert({
-                      id: session.user.id,
-                      email: session.user.email,
-                      full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-                      avatar_url: session.user.user_metadata?.avatar_url,
-                    }, {
-                      onConflict: 'id'
-                    })
-                } catch (err) {
-                  console.error('[Auth State Change] Error upserting user:', err)
-                }
-              }
-            } else {
-              console.log('[Auth State Change] No session, clearing user')
-              set({ 
-                user: null,
-                loading: false 
+              return // Exit early, no need to process further
+            }
+            
+            // For signed in users, refresh their data in the background
+            if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+              console.log('[Auth State Change] Refreshing user data in background...')
+              // Don't await this - let it happen in background
+              get().refreshUser().catch(err => {
+                console.error('[Auth State Change] Background refresh failed:', err)
               })
             }
           }

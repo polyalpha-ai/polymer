@@ -10,6 +10,7 @@ import TelegramBotModal from '@/components/telegram-bot-modal';
 import { ConnectPolymarket } from '@/components/connect-polymarket';
 import { useAuthStore } from '@/lib/stores/use-auth-store';
 import { AuthModal } from '@/components/auth-modal';
+import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,10 +52,10 @@ export default function Header() {
   const [mounted, setMounted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
-  const [isHoveringTheme, setIsHoveringTheme] = useState(false);
   const [sessions, setSessions] = useState<AnalysisSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [loadingPortal, setLoadingPortal] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'system'>('system');
   
   const pathname = usePathname();
   const router = useRouter();
@@ -79,7 +80,25 @@ export default function Header() {
 
   useEffect(() => {
     setMounted(true);
+    
+    // Initialize theme from localStorage or system preference
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'system' | null;
+      if (savedTheme) {
+        setCurrentTheme(savedTheme);
+      } else {
+        // Default to system theme
+        setCurrentTheme('system');
+      }
+    }
   }, []);
+  
+  // Save theme changes to localStorage
+  useEffect(() => {
+    if (mounted && typeof window !== 'undefined') {
+      localStorage.setItem('theme', currentTheme);
+    }
+  }, [currentTheme, mounted]);
   
   // Fetch analysis history when dropdown opens
   const fetchAnalysisHistory = async () => {
@@ -337,77 +356,58 @@ export default function Header() {
                     </DropdownMenuItem>
                   )}
 
-                  {/* Custom Theme Selector with Premium Feature */}
-                  <div className="relative">
-                    <div 
-                      className={`px-2 py-1.5 cursor-pointer transition-all duration-200 ${
-                        subscriptionTier === 'free'
-                          ? 'opacity-60 hover:opacity-80' 
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-                      }`}
-                      onMouseEnter={() => subscriptionTier === 'free' && setIsHoveringTheme(true)}
-                      onMouseLeave={() => setIsHoveringTheme(false)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center pb-1">
-                          <Monitor className="mr-4 h-4 w-4" />
-                          <span className="text-sm">Theme</span>
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {subscriptionTier === 'free' ? '🌙 Premium' : 'System'}
-                        </div>
+                  {/* Theme Switcher with Monetization */}
+                  <div className="px-2 py-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Monitor className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-medium">Theme</span>
                       </div>
-                      
-                      {/* Expandable Premium Feature Teaser */}
-                      <AnimatePresence>
-                        {isHoveringTheme && subscriptionTier === 'free' && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ 
-                              duration: 0.3, 
-                              ease: [0.23, 1, 0.32, 1],
-                              opacity: { duration: 0.2 }
-                            }}
-                            className="overflow-hidden mt-2"
-                          >
-                            <div className="bg-gradient-to-r from-slate-50 to-gray-50 dark:from-gray-900/40 dark:to-slate-900/40 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-                              <div className="flex items-start gap-2">
-                                <div className="text-lg">🌙</div>
-                                <div>
-                                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    You&apos;ve discovered dark mode!
-                                  </div>
-                                  <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                                    A premium feature. Trust me, it&apos;s worth it. Available on the{' '}
-                                    <span className="font-medium">pay-per-use plan</span> for{' '}
-                                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">$0.01 per toggle</span>, or{' '}
-                                    <span className="font-medium">unlimited plan</span> gives you{' '}
-                                    <span className="font-semibold">unlimited toggles</span>.
-                                  </div>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setShowSubscription(true);
-                                      setIsHoveringTheme(false);
-                                    }}
-                                    className="mt-2 text-xs font-medium text-purple-700 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-100 underline underline-offset-2 transition-colors"
-                                  >
-                                    Upgrade Now →
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                      <ThemeSwitcher
+                        value={currentTheme}
+                        onChange={setCurrentTheme}
+                        requiresSubscription={subscriptionTier === 'free'}
+                        hasSubscription={subscriptionTier !== 'free'}
+                        onUpgradeClick={() => setShowSubscription(true)}
+                        userId={user?.id}
+                        sessionId={`session_${Date.now()}`}
+                        tier={subscriptionTier}
+                        className="ml-auto"
+                      />
                     </div>
+                    {subscriptionTier === 'pay_per_use' && (
+                      <div className="text-xs text-gray-500 mt-1 text-right">
+                        $0.01 per switch
+                      </div>
+                    )}
+                    {subscriptionTier === 'subscription' && (
+                      <div className="text-xs text-green-600 dark:text-green-400 mt-1 text-right">
+                        Unlimited switches
+                      </div>
+                    )}
+                    {subscriptionTier === 'free' && (
+                      <div className="text-xs text-amber-600 dark:text-amber-400 mt-1 text-right">
+                        Premium feature
+                      </div>
+                    )}
                   </div>
                   
                   <DropdownMenuSeparator />
                   
-                  <DropdownMenuItem onClick={signOut}>
+                  <DropdownMenuItem onClick={async () => {
+                    console.log('[Header] Sign out button clicked')
+                    try {
+                      const result = await signOut()
+                      console.log('[Header] Sign out result:', result)
+                      if (result?.error) {
+                        console.error('[Header] Sign out error:', result.error)
+                      } else {
+                        console.log('[Header] Sign out successful')
+                      }
+                    } catch (error) {
+                      console.error('[Header] Sign out exception:', error)
+                    }
+                  }}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign Out
                   </DropdownMenuItem>
