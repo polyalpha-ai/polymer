@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     // Create customer session for billing portal access
     const polar = new Polar({ 
       accessToken: process.env.POLAR_ACCESS_TOKEN!,
-      server: process.env.NEXT_PUBLIC_APP_MODE === 'development' ? 'sandbox' : 'production'
+      server: process.env.NEXT_PUBLIC_APP_MODE === 'production' ? 'production' : 'sandbox'
     });
 
     console.log('[Customer Portal] Creating session for customer:', userData.polar_customer_id);

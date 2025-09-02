@@ -4,21 +4,22 @@
 
 **⚠️ NOT FINANCIAL ADVICE** | Polyseer provides analysis for entertainment and research purposes only. Always DYOR.
 
-## 🌟 The Story
+## What is Polyseer?
 
-We've all been there. December 2017 - Bitcoin hits $20K and you think "If only I had bought it years ago." The signs were there, the technology was revolutionary, but the noise drowned out the signal.
+Prediction markets tell you what might happen. Polyseer tells you why.
 
-**What if you could see through the noise?**
+Drop in any Polymarket URL and get a structured analysis that breaks down the actual factors driving an outcome. Instead of gut feelings or surface-level takes, you get systematic research across academic papers, news, market data, and expert analysis.
 
-Polyseer is your crystal ball into Polymarket's prediction markets. Using advanced AI agents and real-time data from Valyu's search network, it cuts through speculation and gives you analyst-grade verdicts on future events.
+The system uses multiple AI agents to research both sides of a question, then aggregates the evidence using Bayesian probability math. Think of it as having a research team that can read thousands of sources in minutes and give you the key insights.
 
-- 🎯 **Precise Predictions**: Multi-agent AI system that researches both sides
-- 🔍 **Deep Research**: Powered by Valyu's search network across academic, web, and proprietary datasets
-- 📊 **Mathematical Rigor**: Bayesian probability aggregation with evidence weighting
-- ⚡ **Real-time Analysis**: Fresh data from multiple sources, not stale information
-- 🎪 **Beautiful UX**: Stunning interface that makes complex analysis digestible
+**Core features:**
+- Systematic research across academic, web, and market data sources
+- Evidence classification and quality scoring
+- Mathematical probability aggregation (not just vibes)
+- Both sides research to avoid confirmation bias
+- Real-time data, not stale information
 
-**Ready to stop missing opportunities?** Paste any Polymarket URL and get your verdict.
+Built for developers, researchers, and anyone who wants rigorous analysis instead of speculation.
 
 ---
 
@@ -274,11 +275,11 @@ WEAVIATE_API_KEY=wv_...
 
 #### 🌍 App Configuration
 ```env
-# Development mode: No rate limits, no auth required, use your own API keys
-NEXT_PUBLIC_APP_MODE=development
+# Development mode (DEFAULT): No rate limits, no auth required, use your own API keys
+# NEXT_PUBLIC_APP_MODE=development  # This is the default if not set
 NODE_ENV=development
 
-# Production mode: Full auth, rate limits, billing system
+# Production mode: Full auth, rate limits, billing system  
 # NEXT_PUBLIC_APP_MODE=production
 # NODE_ENV=production
 ```

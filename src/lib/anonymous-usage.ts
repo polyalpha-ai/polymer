@@ -24,8 +24,8 @@ export async function getAnonymousUsage(): Promise<AnonymousUsage> {
 }
 
 export async function canAnonymousUserQuery(): Promise<{ canProceed: boolean; reason?: string }> {
-  // In development mode, allow unlimited usage
-  if (process.env.NEXT_PUBLIC_APP_MODE === 'development') {
+  // In development mode, allow unlimited usage (default to development)
+  if (process.env.NEXT_PUBLIC_APP_MODE !== 'production') {
     return { canProceed: true }
   }
 
