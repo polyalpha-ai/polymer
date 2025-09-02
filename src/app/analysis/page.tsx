@@ -61,11 +61,17 @@ function AnalysisContent() {
   const router = useRouter();
   const { user } = useAuthStore();
   const url = searchParams.get("url");
+  const historyId = searchParams.get("id"); // New: Check for historical analysis ID
   const [mounted, setMounted] = useState(false);
   const [steps, setSteps] = useState<AnalysisStep[]>([]);
   const [forecast, setForecast] = useState<ForecastCard | null>(null);
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [historicalAnalysis, setHistoricalAnalysis] = useState<any>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  // Determine if this is a historical view
+  const isHistoricalView = !!historyId;
 
   const extractPolymarketSlug = useCallback((url: string) => {
     const match = url.match(/polymarket\.com\/event\/([^/?]+)/);
@@ -85,6 +91,60 @@ function AnalysisContent() {
       step.id === stepId ? { ...step, expanded: !step.expanded } : step
     ));
   }, []);
+
+  const fetchHistoricalAnalysis = useCallback(async () => {
+    if (!historyId || !user) return;
+
+    setIsLoadingHistory(true);
+    try {
+      const response = await fetch(`/api/user/history/${historyId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setHistoricalAnalysis(data);
+        
+        // Convert historical data to the display format
+        if (data.report) {
+          const historicalForecast: ForecastCard = {
+            question: data.report.market_question || 'Historical Analysis',
+            pNeutral: data.report.probability || 0.5,
+            pAware: data.report.market_aware_probability,
+            p0: data.report.prior_probability || 0.5,
+            alpha: 1.0, // Default alpha value
+            drivers: data.report.drivers || [],
+            evidenceInfluence: [], // Use correct property name
+            clusters: [],
+            audit: {}, // Required audit object
+            provenance: data.report.sources || [],
+            markdownReport: data.report.markdown_report || data.report.summary || ''
+          };
+          setForecast(historicalForecast);
+        }
+
+        // Convert historical steps to display format if available
+        if (data.analysis_steps && Array.isArray(data.analysis_steps)) {
+          const historicalSteps: AnalysisStep[] = data.analysis_steps.map((step: any, index: number) => ({
+            id: step.step || `step_${index}`,
+            name: STEP_CONFIG[step.step]?.name || step.step || `Step ${index + 1}`,
+            message: step.message || STEP_CONFIG[step.step]?.description || 'Processing...',
+            status: 'complete' as const,
+            details: step.details,
+            timestamp: step.timestamp,
+            expanded: false
+          }));
+          setSteps(historicalSteps);
+        }
+
+        setIsComplete(true);
+      } else {
+        setError('Failed to load historical analysis');
+      }
+    } catch (err) {
+      console.error('Error fetching historical analysis:', err);
+      setError('Failed to load historical analysis');
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [historyId, user]);
 
   const startAnalysis = useCallback(() => {
     if (!url) return;
@@ -246,10 +306,11 @@ function AnalysisContent() {
   }, []);
 
   const openPolymarketBet = useCallback(() => {
-    if (url) {
-      window.open(url, '_blank');
+    const targetUrl = isHistoricalView ? historicalAnalysis?.market_url : url;
+    if (targetUrl) {
+      window.open(targetUrl, '_blank');
     }
-  }, [url]);
+  }, [url, isHistoricalView, historicalAnalysis]);
 
   useEffect(() => {
     setMounted(true);
@@ -257,12 +318,64 @@ function AnalysisContent() {
   }, []);
 
   useEffect(() => {
-    if (mounted && url && !isComplete && steps.length === 0) {
-      startAnalysis();
+    if (!mounted) return;
+
+    if (isHistoricalView) {
+      // Load historical analysis
+      if (historyId && user && !isComplete && !isLoadingHistory) {
+        fetchHistoricalAnalysis();
+      }
+    } else {
+      // Start live analysis
+      if (url && !isComplete && steps.length === 0) {
+        startAnalysis();
+      }
     }
-  }, [mounted, url, isComplete, steps.length, startAnalysis]);
+  }, [mounted, isHistoricalView, historyId, url, user, isComplete, steps.length, isLoadingHistory, startAnalysis, fetchHistoricalAnalysis]);
 
   if (!mounted) return null;
+
+  // Special loading state for historical analysis
+  if (isHistoricalView && isLoadingHistory) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="text-center"
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full mx-auto mb-4"
+          />
+          <p className="text-white/70">Loading historical analysis...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Special error handling for historical analysis
+  if (isHistoricalView && error) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="text-center max-w-md"
+        >
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-white mb-2">Analysis Not Found</h1>
+          <p className="text-red-400 mb-4">{error}</p>
+          <Button onClick={() => router.push('/')} variant="outline">
+            Back to Home
+          </Button>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (error) {
     // Check if this is a rate limit error for anonymous users
@@ -422,8 +535,63 @@ function AnalysisContent() {
       {/* Content overlay */}
       <div className="relative z-50 max-w-4xl mx-auto pt-24">
         
+        {/* Header Section */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-3xl font-bold text-white font-[family-name:var(--font-space)]">
+              {isHistoricalView ? 'Historical Analysis' : 'Deep Analysis'}
+            </h1>
+            {isHistoricalView && (
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.back()}
+                  className="border-white/20 bg-white/10 text-white hover:bg-white/20"
+                >
+                  Back
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => router.push('/')}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  New Analysis
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          {isHistoricalView && historicalAnalysis && (
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <div className="text-white/60">Started</div>
+                  <div className="text-white font-medium">
+                    {new Date(historicalAnalysis.started_at).toLocaleString()}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-white/60">Completed</div>
+                  <div className="text-white font-medium">
+                    {new Date(historicalAnalysis.completed_at).toLocaleString()}
+                  </div>
+                </div>
+                {historicalAnalysis.valyu_cost && (
+                  <div>
+                    <div className="text-white/60">API Cost</div>
+                    <div className="text-white font-medium">
+                      ${historicalAnalysis.valyu_cost.toFixed(4)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        
         {/* Anonymous User Banner */}
-        {!user && (
+        {!user && !isHistoricalView && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -453,14 +621,37 @@ function AnalysisContent() {
           className="mb-12 text-center"
         >
           <div className="bg-black/40 backdrop-blur-sm rounded-lg p-4 max-w-4xl mx-auto">
-            <a
-              href={url || '#'}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white/90 hover:text-white text-sm break-all leading-relaxed hover:underline decoration-white/50 transition-colors"
-            >
-              {url}
-            </a>
+            {isHistoricalView ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                    Historical Analysis
+                  </Badge>
+                  {historicalAnalysis && (
+                    <span className="text-white/60 text-sm">
+                      {new Date(historicalAnalysis.completed_at).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+                <a
+                  href={historicalAnalysis?.market_url || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white/90 hover:text-white text-sm break-all leading-relaxed hover:underline decoration-white/50 transition-colors"
+                >
+                  {historicalAnalysis?.market_url || 'Loading...'}
+                </a>
+              </div>
+            ) : (
+              <a
+                href={url || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white/90 hover:text-white text-sm break-all leading-relaxed hover:underline decoration-white/50 transition-colors"
+              >
+                {url}
+              </a>
+            )}
           </div>
         </motion.div>
 

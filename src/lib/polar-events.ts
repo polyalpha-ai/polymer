@@ -95,15 +95,4 @@ export class PolarEventTracker {
     }
   }
 
-  private async getCustomerIdForUser(userId: string): Promise<string | null> {
-    try {
-      // In a real implementation, you'd query your database here
-      // For now, we'll assume the API caller provides the customer ID
-      // This method exists for future extensibility
-      return null; // Will be handled in the API route
-    } catch (error) {
-      console.error('[PolarEventTracker] Failed to get customer ID:', error);
-      return null;
-    }
-  }
 }

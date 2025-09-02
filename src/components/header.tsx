@@ -55,7 +55,7 @@ export default function Header() {
   const [sessions, setSessions] = useState<AnalysisSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [loadingPortal, setLoadingPortal] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'system'>('system');
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'system'>('light');
   
   const pathname = usePathname();
   const router = useRouter();
@@ -81,14 +81,14 @@ export default function Header() {
   useEffect(() => {
     setMounted(true);
     
-    // Initialize theme from localStorage or system preference
+    // Initialize theme from localStorage or default to light
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'system' | null;
       if (savedTheme) {
         setCurrentTheme(savedTheme);
       } else {
-        // Default to system theme
-        setCurrentTheme('system');
+        // Default to light theme
+        setCurrentTheme('light');
       }
     }
   }, []);
@@ -119,7 +119,7 @@ export default function Header() {
   };
   
   const handleSessionSelect = (sessionId: string) => {
-    router.push(`/analysis/${sessionId}`);
+    router.push(`/analysis?id=${sessionId}`);
   };
   
   const handleDeleteSession = async (sessionId: string) => {
