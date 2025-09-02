@@ -4,6 +4,22 @@
 
 **⚠️ NOT FINANCIAL ADVICE** | Polyseer provides analysis for entertainment and research purposes only. Always DYOR.
 
+## Tldr;
+
+```bash
+git clone https://github.com/yorkeccak/polyseer.git
+cd polyseer
+npm install
+
+# Create .env.local with:
+# OPENAI_API_KEY=sk-...
+# VALYU_API_KEY=vl_...  # Get from platform.valyu.network
+
+npm run dev
+```
+
+Open [localhost:3000](http://localhost:3000), paste any Polymarket URL, and get your analysis. No signup required in development mode.
+
 ## What is Polyseer?
 
 Prediction markets tell you what might happen. Polyseer tells you why.
@@ -209,7 +225,7 @@ Each piece of evidence receives an influence score based on:
 #### For Development Mode
 - **Node.js 18+**
 - **npm/pnpm/yarn** 
-- **Valyu API key** - Get yours at [valyu.network](https://valyu.network)
+- **Valyu API key** - Get yours at [platform.valyu.network](https://platform.valyu.network)
 - **OpenAI API key** - For GPT-5 access
 
 #### Additional for Production Mode  
@@ -240,7 +256,7 @@ Create `.env.local` and configure the required variables for your mode:
 # OpenAI (GPT-4/5 access required)
 OPENAI_API_KEY=sk-...
 
-# Valyu Search Network
+# Valyu Search Network - Get from platform.valyu.network
 VALYU_API_KEY=vl_...
 
 # Polymarket (optional, for enhanced data)
