@@ -87,9 +87,15 @@ export const valyuDeepSearchTool = tool({
     const mappedSearchType: ValyuSearchSDKType =
       searchTypeMap[searchType] || "all";
 
+    // Compute default startDate if LLM didn't pass one
+    const days = Number(process.env.VALYU_DEFAULT_START_DAYS || 180);
+    const defaultStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+
     try {
       console.log(
-        `[ValyuDeepSearchTool] Query: "${query}", LLM Type: ${searchType}, Valyu Type: ${mappedSearchType}`
+        `[ValyuDeepSearchTool] Query: "${query}", LLM Type: ${searchType}, Valyu Type: ${mappedSearchType}, startDate=${startDate || defaultStart}`
       );
       const response = await valyu.search(
         query,
@@ -98,7 +104,7 @@ export const valyuDeepSearchTool = tool({
           maxNumResults: 8,
           maxPrice: 50.0,
           relevanceThreshold: 0.5,
-          ...(startDate && { startDate }),
+          startDate: startDate || defaultStart,
         }
       );
 
@@ -181,8 +187,14 @@ export const valyuWebSearchTool = tool({
     
     const valyu = new Valyu(VALYU_API_KEY);
     
+    // Compute default startDate if LLM didn't pass one
+    const days = Number(process.env.VALYU_DEFAULT_START_DAYS || 180);
+    const defaultStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+
     try {
-      console.log(`[ValyuWebSearchTool] Web Query: "${query}"`);
+      console.log(`[ValyuWebSearchTool] Web Query: "${query}", startDate=${startDate || defaultStart}`);
       const response = await valyu.search(
         query,
         {
@@ -190,7 +202,7 @@ export const valyuWebSearchTool = tool({
           maxNumResults: 8,
           maxPrice: 30.0,
           relevanceThreshold: 0.5,
-          ...(startDate && { startDate }),
+          startDate: startDate || defaultStart,
         }
       );
       

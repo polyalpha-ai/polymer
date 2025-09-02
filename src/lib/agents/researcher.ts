@@ -271,7 +271,8 @@ ENHANCED Evidence Classification Rules:
   * Rumor, speculation, or hearsay
 
 STRICT RECENCY FILTER:
-- Only include sources with publication dates in 2024 or 2025. Exclude older sources.
+- Prefer 2025 sources. Include 2024 only if necessary to cover critical mechanisms.
+- Exclude pre-2024 sources.
 - Do NOT include evidence without a clear publication date.
 
 FRESHNESS PRIORITY:
@@ -329,7 +330,7 @@ CRITICAL REQUIREMENT: ALL evidence must be directly relevant to the question "${
 - ONLY include evidence specifically about the subject and context in the question
 - If your search found off-topic results, mark them as irrelevant and don't include them
 
-Now create 4-8 high-quality evidence items in JSON format matching this schema (prioritize Type A/B; ONLY 2024-2025 sources):
+Now create 4-8 high-quality evidence items in JSON format matching this schema (prioritize Type A/B; PREFER 2025 SOURCES; include 2024 only if essential to cover critical mechanisms; exclude pre-2024):
 {
   "items": [
     {
@@ -371,7 +372,7 @@ Return ONLY the JSON object, no other text.`;
       if (before !== items.length) {
         console.warn(`🚫 Dropped ${before - items.length} old/undated evidence items (kept ${items.length}) for ${side}`);
       }
-      items = freshFirst(items, { maxItems: 8, minItems: 4, maxOldFrac: 0.33 });
+      items = freshFirst(items, { maxItems: 8, minItems: 4, maxOldFrac: 0.25 });
       return items;
     } else {
       console.warn(`No structured output generated for ${side} research`);
@@ -478,7 +479,7 @@ Return 3-6 total items across seeds.`;
 
     const summarized = await summarizeFindings(searchResult.text, 1500, question, 'NEUTRAL');
 
-    const evidencePrompt = `From the adjacent research summary, create 3-6 high-quality evidence items (ONLY 2024-2025 sources).
+    const evidencePrompt = `From the adjacent research summary, create 3-6 high-quality evidence items (PREFER 2025; include 2024 only when necessary; exclude pre-2024).
 
 Summary (compressed): ${summarized}
 
@@ -524,7 +525,7 @@ Return ONLY the JSON.`;
       })) as Evidence[];
       items = dedupeAndNormalizeEvidence(items);
       items = items.filter(e => isRecentEnough(e.publishedAt));
-      items = freshFirst(items, { maxItems: 6, minItems: 3, maxOldFrac: 0.33 });
+      items = freshFirst(items, { maxItems: 6, minItems: 3, maxOldFrac: 0.25 });
       return items;
     }
     return [];
@@ -559,7 +560,8 @@ Target Side: ${search.side}
 Use the search tools to find specific evidence related to this query. Focus on high-quality, verifiable sources that address the identified gap.
 
 STRICT RECENCY FILTER:
-- Only include sources with publication dates in 2024 or 2025. Exclude older sources.
+- Prefer 2025 sources. Include 2024 only if necessary to cover critical mechanisms.
+- Exclude pre-2024 sources.
 - Do NOT include evidence without a clear publication date.
 
 QUERY CONSTRUCTION RULES (Targeted):
@@ -583,7 +585,7 @@ After searching, return 1-3 high-quality evidence items that directly address th
 
     // Step 2: Summarize findings to bound context, then generate structured evidence
     const summarized = await summarizeFindings(searchResult.text, 2000, question, search.side);
-    const evidencePrompt = `Based on your targeted research findings, create 2-4 high-quality evidence items (ONLY 2024-2025 sources).
+    const evidencePrompt = `Based on your targeted research findings, create 2-4 high-quality evidence items (PREFER 2025; include 2024 only when necessary; exclude pre-2024).
 
 Research Summary (compressed): ${summarized}
 Target Side: ${search.side}
@@ -640,7 +642,7 @@ Return ONLY the JSON object, no other text.`;
       if (before !== items.length) {
         console.warn(`🚫 Dropped ${before - items.length} old/undated evidence items (kept ${items.length}) for ${search.side} follow-up`);
       }
-      items = freshFirst(items, { maxItems: 6, minItems: 2, maxOldFrac: 0.33 });
+      items = freshFirst(items, { maxItems: 6, minItems: 2, maxOldFrac: 0.25 });
       return items;
     } else {
       console.warn(`No structured output generated for targeted research: ${search.query}`);
