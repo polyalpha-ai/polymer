@@ -50,28 +50,3 @@ export function getPolarTrackedModel(modelName: string = "gpt-5") {
     return openai(modelName);
   }
 }
-
-// Direct function for specific user (used in forecast route)
-export function getPolarTrackedModelForUser(userId: string, customerId: string, modelName: string = "gpt-5") {
-  if (!process.env.POLAR_ACCESS_TOKEN) {
-    console.error('[PolarLLM] POLAR_ACCESS_TOKEN not found - returning unwrapped model');
-    return openai(modelName);
-  }
-
-  try {
-    console.log(`[PolarLLM] Creating tracked model for user: ${userId}, customer: ${customerId}, model: ${modelName}`);
-    
-    const ingestion = Ingestion({ 
-      accessToken: process.env.POLAR_ACCESS_TOKEN 
-    })
-    .strategy(new LLMStrategy(openai(modelName)))
-    .ingest("llm_tokens");
-    
-    return ingestion.client({
-      customerId: customerId
-    });
-  } catch (error) {
-    console.error('[PolarLLM] Failed to create tracked model:', error);
-    return openai(modelName);
-  }
-}
