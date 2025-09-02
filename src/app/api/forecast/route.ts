@@ -88,12 +88,18 @@ export async function POST(req: NextRequest) {
       session = await createAnalysisSession(user.id, polymarketSlug);
       sessionId = session.id;
       
-      // Set context for immediate usage tracking (for pay-per-use customers)
+      // Handle usage tracking based on user type
       if (userData.subscription_tier === 'pay_per_use' && userData.polar_customer_id) {
+        // Set context for immediate usage tracking (for pay-per-use customers)
         setAnalysisContext(user.id, userData.polar_customer_id); // For Valyu API tracking
         setLLMContext(user.id, userData.polar_customer_id); // For LLM token tracking
         console.log(`[Forecast] Set tracking context for pay-per-use customer: ${userData.polar_customer_id}`);
+      } else if (userData.subscription_tier === 'free' || !userData.subscription_tier) {
+        // For signed-in free users, increment cookie usage like anonymous users
+        await incrementAnonymousUsage();
+        console.log(`[Forecast] Signed-in free user used cookie-based daily query`);
       }
+      // Subscription users don't need upfront usage tracking
     } else {
       // For anonymous users, increment usage count immediately
       await incrementAnonymousUsage();
@@ -119,17 +125,9 @@ export async function POST(req: NextRequest) {
           // Send initial connection event
           sendEvent({ type: 'connected', message: 'Starting analysis...', sessionId });
 
-          // Handle usage tracking based on user type
-          if (!isAnonymous && user) {
-            if (userData.subscription_tier === 'subscription') {
-              // Decrement analysis count for subscription users
-              await decrementAnalysisCount(user.id);
-            } else if (userData.subscription_tier === 'free' || !userData.subscription_tier) {
-              // For signed-in free users, increment cookie usage like anonymous users
-              await incrementAnonymousUsage();
-              console.log(`[Forecast] Signed-in free user used cookie-based daily query`);
-            }
-            // Pay-per-use users don't need upfront usage tracking
+          // Decrement analysis count for subscription users only
+          if (!isAnonymous && user && userData.subscription_tier === 'subscription') {
+            await decrementAnalysisCount(user.id);
           }
 
           // Create progress callback for the orchestrator
