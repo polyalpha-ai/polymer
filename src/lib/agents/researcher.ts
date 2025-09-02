@@ -6,7 +6,8 @@ import { valyuDeepSearchTool, valyuWebSearchTool } from '../tools/valyu_search';
 import { getPolarTrackedModel } from '../polar-llm-strategy';
 
 // Get model dynamically to use current context
-const getModel = () => getPolarTrackedModel('llama-3.3-70b-versatile');
+const getModelSmall = () => getPolarTrackedModel('gpt-5-mini');
+const getModel = () => getPolarTrackedModel('gpt-5');
 
 interface MarketData {
   market_facts: {
@@ -56,6 +57,56 @@ function isRecentEnough(dateStr?: string): boolean {
   // Strict cutoff: only keep evidence from 2024-01-01 onward
   const cutoff = Date.parse('2024-01-01T00:00:00Z');
   return t >= cutoff;
+}
+
+// Freshness helpers to bias towards last 30/180 days
+function daysSince(iso?: string, now = Date.now()): number | null {
+  if (!iso) return null;
+  const ts = Date.parse(iso);
+  if (Number.isNaN(ts)) return null;
+  return Math.max(0, (now - ts) / (1000 * 60 * 60 * 24));
+}
+
+function freshFirst(items: Evidence[], opts?: { maxItems?: number; minItems?: number; maxOldFrac?: number; now?: number }): Evidence[] {
+  const maxItems = opts?.maxItems ?? 8;
+  const minItems = opts?.minItems ?? 4;
+  const maxOldFrac = opts?.maxOldFrac ?? 0.33;
+  const now = opts?.now ?? Date.now();
+
+  const sorted = [...items].sort((a, b) => {
+    const da = daysSince(a.publishedAt, now);
+    const db = daysSince(b.publishedAt, now);
+    if (da === null && db === null) return 0;
+    if (da === null) return 1;
+    if (db === null) return -1;
+    return da - db; // smaller -> more recent
+  });
+
+  const fresh30: Evidence[] = [];
+  const fresh180: Evidence[] = [];
+  const older: Evidence[] = [];
+  for (const e of sorted) {
+    const d = daysSince(e.publishedAt, now);
+    if (d !== null && d <= 30) fresh30.push(e);
+    else if (d !== null && d <= 180) fresh180.push(e);
+    else older.push(e);
+  }
+
+  const out: Evidence[] = [];
+  for (const e of fresh30) { if (out.length >= maxItems) break; out.push(e); }
+  for (const e of fresh180) { if (out.length >= maxItems) break; out.push(e); }
+  const oldCap = Math.max(1, Math.floor(maxItems * maxOldFrac));
+  let oldAdded = 0;
+  for (const e of older) {
+    if (out.length >= maxItems) break;
+    if (oldAdded >= oldCap) break;
+    out.push(e);
+    oldAdded++;
+  }
+  if (out.length < minItems) {
+    for (let i = oldAdded; i < older.length && out.length < minItems; i++) out.push(older[i]);
+  }
+  return out;
 }
 
 // URL normalization and evidence deduplication helpers
@@ -144,7 +195,7 @@ async function summarizeFindings(raw: string, maxChars = 2000, question?: string
       }
     })();
     const { text } = await generateText({
-      model: getModel(),
+      model: getModelSmall(),
       system: 'You compress research notes into a concise, high-signal summary. Preserve key facts, entities, dates, numbers. No fluff.',
       prompt: `Question: ${question ?? 'n/a'}\n${sideDirective}\nBe strictly ON-TOPIC to the question. Remove unrelated domains or entities.\nCompress the following research findings into a tight bullet list with short headings. Max ${maxChars} characters.\n\n---\n${seed}`,
     });
@@ -164,9 +215,14 @@ Market Context:
 - Liquidity: $${marketData.market_facts.liquidity?.toLocaleString() || 'N/A'}
 ` : '';
 
-  const recencyBlock = plan.recency?.needed
-    ? `\nRECENCY SETTINGS:\n- Use startDate=${plan.recency.startDate || '2024-01-01'} in tool calls (valyuDeepSearch/valyuWebSearch) when supported.\n- Strictly prefer 2024–2025 sources; avoid undated/archival items.\n`
-    : '';
+  const now = new Date();
+  const start180 = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const recencyBlock = `
+RECENCY SETTINGS:
+- Strongly prioritize sources from the LAST 30 DAYS; otherwise prefer LAST 180 DAYS.
+- Include explicit publication dates in sources when possible.
+- Use startDate=${plan.recency?.startDate || start180} in tool calls (valyuDeepSearch/valyuWebSearch) when supported to bias recency.
+- Avoid undated/archival items unless necessary to reach minimum coverage.`;
 
   return `You are the ${side === 'FOR' ? 'Pro-Researcher' : 'Con-Researcher'}.
 Goal: Find **independent** sources ${side === 'FOR' ? 'supporting' : 'contradicting'} the outcome.
@@ -185,7 +241,7 @@ Research Process:
 QUERY CONSTRUCTION RULES (Initial Cycle):
 - DO NOT prefix queries with outlet names (e.g., do not start queries with "Reuters ", "Bloomberg ", "WSJ ").
 - DO NOT use site: filters.
-- Include the current year "2025" in each query to bias toward fresh results.
+- Prefer time-scoped phrasing like "last 30 days", "this month", or use year "2025" to bias toward fresh results.
 - Use natural language with specific entities/contexts from the question and subclaims.
 - Prefer phrasing like "<entity> <topic> 2025 status" over brand-led queries.
 
@@ -217,6 +273,10 @@ ENHANCED Evidence Classification Rules:
 STRICT RECENCY FILTER:
 - Only include sources with publication dates in 2024 or 2025. Exclude older sources.
 - Do NOT include evidence without a clear publication date.
+
+FRESHNESS PRIORITY:
+- Strongly prioritize items from the last 30 days; otherwise prefer last 180 days.
+- When using tools, pass startDate close to now-180d if supported.
 
 Scoring Guidelines:
 - Verifiability: 1.0 if you can recompute/verify numbers, else estimate 0-1
@@ -291,7 +351,7 @@ Now create 4-8 high-quality evidence items in JSON format matching this schema (
 Return ONLY the JSON object, no other text.`;
 
     const structuredResult = await generateText({
-      model: getModel(),
+      model: getModelSmall(),
       system: 'You are a structured data generator. Return only valid JSON matching the exact schema provided.',
       prompt: evidencePrompt,
       experimental_output: Output.object({
@@ -299,7 +359,7 @@ Return ONLY the JSON object, no other text.`;
       }),
     });
 
-    // Access the structured output, normalize, dedupe, and enforce recency
+    // Access the structured output, normalize, dedupe, and enforce recency, then fresh-first select
     if (structuredResult.experimental_output) {
       const itemsRaw = structuredResult.experimental_output.items.map((item: any) => ({
         ...item,
@@ -311,6 +371,7 @@ Return ONLY the JSON object, no other text.`;
       if (before !== items.length) {
         console.warn(`🚫 Dropped ${before - items.length} old/undated evidence items (kept ${items.length}) for ${side}`);
       }
+      items = freshFirst(items, { maxItems: 8, minItems: 4, maxOldFrac: 0.33 });
       return items;
     } else {
       console.warn(`No structured output generated for ${side} research`);
@@ -384,7 +445,9 @@ Market Context:
 - Volume: ${marketData.market_facts.volume || 'N/A'}
 ` : '';
 
-    const recencyLine = plan.recency?.needed ? `Use startDate=${plan.recency.startDate || '2024-01-01'} in tool calls if supported.` : '';
+    const now = new Date();
+    const start180 = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const recencyLine = `Use startDate=${plan.recency?.startDate || start180} in tool calls if supported. Strongly prefer items from the last 30 days; otherwise last 180 days.`;
 
     const prompt = `You are researching adjacent signals and catalysts that can indirectly move the outcome.
 
@@ -404,7 +467,7 @@ For each seed, use tools to find recent (2024–2025) signals. For each high-qua
 Return 3-6 total items across seeds.`;
 
     const searchResult = await generateText({
-      model: getModel(),
+      model: getModelSmall(),
       system: 'You are an expert adjacent-signal researcher. Focus on recent, high-impact catalysts with clear linkage.',
       prompt: `${prompt}\n\nUse the search tools to find relevant information, then summarize your findings.`,
       tools: {
@@ -461,6 +524,7 @@ Return ONLY the JSON.`;
       })) as Evidence[];
       items = dedupeAndNormalizeEvidence(items);
       items = items.filter(e => isRecentEnough(e.publishedAt));
+      items = freshFirst(items, { maxItems: 6, minItems: 3, maxOldFrac: 0.33 });
       return items;
     }
     return [];
@@ -468,74 +532,6 @@ Return ONLY the JSON.`;
     console.error('Error in adjacent research:', e);
     return [];
   }
-}
-
-// Helper function for automatic evidence type classification
-function classifyEvidenceType(claim: string, urls: string[], sourceDescription: string): {
-  suggestedType: 'A' | 'B' | 'C' | 'D';
-  verifiabilityBonus: number;
-  explanation: string;
-} {
-  let score = 0;
-  let explanation = '';
-  let verifiabilityBonus = 0;
-
-  // URL-based classification
-  const highQualityDomains = ['reuters.com', 'bloomberg.com', 'wsj.com', 'ft.com', 'apnews.com', 'ap.org'];
-  const officialDomains = ['.gov', 'federalreserve.gov', 'sec.gov'];
-  
-  const hasHighQualitySource = urls.some(url => highQualityDomains.some(domain => url.includes(domain)));
-  const hasOfficialSource = urls.some(url => officialDomains.some(domain => url.includes(domain)));
-  
-  if (hasOfficialSource) {
-    score += 3;
-    explanation += 'Official government source (+3). ';
-  } else if (hasHighQualitySource) {
-    score += 2;
-    explanation += 'High-quality news source (+2). ';
-  }
-
-  // Content-based classification
-  const primaryIndicators = ['official statement', 'press release', 'according to documents', 'on the record', 'regulatory filing'];
-  const secondaryIndicators = ['expert analysis', 'investigation found', 'data shows', 'study reveals'];
-  const tertiaryIndicators = ['sources say', 'reportedly', 'according to reports'];
-  const weakIndicators = ['alleged', 'rumored', 'speculation', 'unconfirmed'];
-
-  const text = claim.toLowerCase() + ' ' + sourceDescription.toLowerCase();
-  
-  if (primaryIndicators.some(indicator => text.includes(indicator))) {
-    score += 2;
-    explanation += 'Primary source indicators (+2). ';
-  } else if (secondaryIndicators.some(indicator => text.includes(indicator))) {
-    score += 1;
-    explanation += 'Secondary source indicators (+1). ';
-  } else if (tertiaryIndicators.some(indicator => text.includes(indicator))) {
-    score -= 1;
-    explanation += 'Tertiary source indicators (-1). ';
-  } else if (weakIndicators.some(indicator => text.includes(indicator))) {
-    score -= 2;
-    explanation += 'Weak source indicators (-2). ';
-  }
-
-  // Recency bonus
-  if (text.includes('2025') || text.includes('recent')) {
-    verifiabilityBonus = 0.1;
-    explanation += 'Recent publication (+0.1 verifiability). ';
-  }
-
-  // Determine type based on total score
-  let suggestedType: 'A' | 'B' | 'C' | 'D';
-  if (score >= 4) {
-    suggestedType = 'A';
-  } else if (score >= 2) {
-    suggestedType = 'B';
-  } else if (score >= 0) {
-    suggestedType = 'C';
-  } else {
-    suggestedType = 'D';
-  }
-
-  return { suggestedType, verifiabilityBonus, explanation };
 }
 
 async function conductTargetedResearch(
@@ -576,7 +572,7 @@ After searching, return 1-3 high-quality evidence items that directly address th
 
     // Step 1: Use tools to gather information
     const searchResult = await generateText({
-      model: getModel(),
+      model: getModelSmall(),
       system: 'You are an expert researcher conducting targeted searches to fill specific analytical gaps.',
       prompt: `${prompt}\n\nUse the search tools to find relevant information, then summarize your findings.`,
       tools: {
@@ -624,7 +620,7 @@ AUTOMATIC CLASSIFICATION HINTS:
 Return ONLY the JSON object, no other text.`;
 
     const structuredResult = await generateText({
-      model: getModel(),
+      model: getModelSmall(),
       system: 'You are a structured data generator. Return only valid JSON matching the exact schema provided.',
       prompt: evidencePrompt,
       experimental_output: Output.object({
@@ -632,7 +628,7 @@ Return ONLY the JSON object, no other text.`;
       }),
     });
 
-    // Access the structured output, normalize, dedupe, and enforce recency
+    // Access the structured output, normalize, dedupe, and enforce recency, then fresh-first select
     if (structuredResult.experimental_output) {
       const itemsRaw = structuredResult.experimental_output.items.map((item: any) => ({
         ...item,
@@ -644,6 +640,7 @@ Return ONLY the JSON object, no other text.`;
       if (before !== items.length) {
         console.warn(`🚫 Dropped ${before - items.length} old/undated evidence items (kept ${items.length}) for ${search.side} follow-up`);
       }
+      items = freshFirst(items, { maxItems: 6, minItems: 2, maxOldFrac: 0.33 });
       return items;
     } else {
       console.warn(`No structured output generated for targeted research: ${search.query}`);

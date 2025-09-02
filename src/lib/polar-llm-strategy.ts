@@ -19,7 +19,7 @@ export function clearLLMContext() {
 // Get a wrapped model for the current context
 export function getPolarTrackedModel(modelName: string = 'gpt-5') {
   // Decide which base model to use: openai for gpt-5, groq for others
-  const baseModel = modelName === 'gpt-5' ? openai(modelName) : groq(modelName);
+  const baseModel = modelName.includes('gpt-5') ? openai(modelName) : groq(modelName);
 
   // If no customer ID in context, return unwrapped model
   if (!currentUserContext.customerId) {

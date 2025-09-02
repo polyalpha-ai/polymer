@@ -3,7 +3,7 @@ import { getPolarTrackedModel } from '../polar-llm-strategy';
 import { InfluenceItem, ClusterMeta, Evidence } from '../forecasting/types';
 
 // Get model dynamically to use current context
-const getModel = () => getPolarTrackedModel('llama-3.3-70b-versatile');
+const getModel = () => getPolarTrackedModel('gpt-5-mini');
 
 export async function reporterAgent(
   question: string,

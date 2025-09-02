@@ -9,6 +9,7 @@ import { getPolarTrackedModel } from '../polar-llm-strategy';
 
 // Get model dynamically to use current context
 const getModel = () => getPolarTrackedModel('gpt-5');
+const getModelSmall = () => getPolarTrackedModel('gpt-5-mini');
 
 export interface MarketSnapshot { 
   probability: number; 
@@ -49,7 +50,7 @@ async function analyzeTopicRelevance(evidence: Evidence[], question: string): Pr
   
   try {
     const { object } = await generateObject({
-      model: getModel(),
+      model: getModelSmall(),
       schema: RelevanceSchema,
       system: `You are a relevance analyzer. Determine if evidence items are directly relevant to the prediction question.
 
@@ -151,6 +152,23 @@ function pathwayBoost(path?: string): number {
   return 0.10; // mild default for unknown pathways
 }
 
+// Stronger, explicit recency weighting to favor very fresh evidence
+function recencyMultiplier(publishedAt?: string, now = Date.now()): number {
+  if (!publishedAt) return 0.85; // downweight undated items
+  const ts = Date.parse(publishedAt);
+  if (Number.isNaN(ts)) return 0.85;
+  const days = Math.max(0, (now - ts) / (1000 * 60 * 60 * 24));
+  // Buckets:
+  // 0-30 days: strong upweight
+  // 31-180 days: moderate upweight
+  // 181-365 days: slight downweight compared to neutral
+  // >365 days: heavier downweight (should rarely appear due to earlier filters)
+  if (days <= 30) return 1.35;
+  if (days <= 180) return 1.20;
+  if (days <= 365) return 0.95;
+  return 0.85;
+}
+
 export async function analystAgentWithCritique(
   question: string, 
   p0: number, 
@@ -212,6 +230,15 @@ export async function analystAgentWithCritique(
     return { ...e, logLRHint: hinted };
   });
 
+  // Step 4b: Apply explicit recency multiplier to strongly favor fresh evidence
+  const recencyScaled = pathwayScaled.map(e => {
+    const mult = recencyMultiplier(e.publishedAt);
+    const base = typeof e.logLRHint === 'number' ? e.logLRHint : evidenceLogLR(e);
+    const cap = TYPE_CAPS[e.type];
+    const hinted = clamp(base * mult, -cap, cap);
+    return { ...e, logLRHint: hinted };
+  });
+
   // Step 5: Apply correlation adjustments from critic
   const adjustedRho = { ...rhoByCluster };
   for (const [clusterId, adjustment] of Object.entries(critique.correlationAdjustments)) {
@@ -220,7 +247,7 @@ export async function analystAgentWithCritique(
 
   console.log(`📊 Analyst applying critic feedback: filtered ${evidence.length - filteredEvidence.length} evidence items total, niche-boosted ${Object.keys(nicheMap).length} items, pathway-scaled ${pathwayScaled.length} items, adjusted ${Object.keys(critique.correlationAdjustments).length} correlations`);
 
-  const { pNeutral, influence, clusters } = aggregateNeutral(p0, pathwayScaled, adjustedRho);
+  const { pNeutral, influence, clusters } = aggregateNeutral(p0, recencyScaled, adjustedRho);
   let pAware: number | undefined;
   
   if (marketFn) {
@@ -228,5 +255,5 @@ export async function analystAgentWithCritique(
     pAware = blendMarket(pNeutral, m.probability, 0.1);
   }
   
-  return { pNeutral, pAware, influence, clusters, filteredEvidence: pathwayScaled };
+  return { pNeutral, pAware, influence, clusters, filteredEvidence: recencyScaled };
 }

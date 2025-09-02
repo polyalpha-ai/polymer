@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { getPolarTrackedModel } from '../polar-llm-strategy';
 
 // Get model dynamically to use current context
-const getModel = () => getPolarTrackedModel('llama-3.3-70b-versatile');
+const getModelSmall = () => getPolarTrackedModel('gpt-5-mini');
 
 const DriversSchema = z.object({
   drivers: z.array(z.string()).min(3).max(5).describe('Key factors that could influence the outcome (3-8 concise factors)'),
@@ -26,7 +26,7 @@ interface MarketData {
 export async function generateDrivers(marketData: MarketData): Promise<string[]> {
   try {
     const result = await generateObject({
-      model: getModel(),
+      model: getModelSmall(),
       schema: DriversSchema,
       system: 'You are an expert analyst. Identify the key factors that would most likely influence the outcome of this prediction market.',
       prompt: `Analyze this prediction market and identify 3-5 key drivers that could influence the outcome:
