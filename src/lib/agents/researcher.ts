@@ -6,7 +6,7 @@ import { valyuDeepSearchTool, valyuWebSearchTool } from '../tools/valyu_search';
 import { getPolarTrackedModel } from '../polar-llm-strategy';
 
 // Get model dynamically to use current context
-const getModel = () => getPolarTrackedModel('gpt-5');
+const getModel = () => getPolarTrackedModel('llama-3.3-70b-versatile');
 
 interface MarketData {
   market_facts: {

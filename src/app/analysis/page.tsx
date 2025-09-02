@@ -539,7 +539,7 @@ function AnalysisContent() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-3xl font-bold text-white font-[family-name:var(--font-space)]">
-              {isHistoricalView ? 'Historical Analysis' : 'Deep Analysis'}
+              {isHistoricalView ? 'Historical Analysis' : ''}
             </h1>
             {isHistoricalView && (
               <div className="flex gap-3">

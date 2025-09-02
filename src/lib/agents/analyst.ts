@@ -5,6 +5,10 @@ import { clamp } from '../forecasting/math';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { openai } from '@ai-sdk/openai';
+import { getPolarTrackedModel } from '../polar-llm-strategy';
+
+// Get model dynamically to use current context
+const getModel = () => getPolarTrackedModel('gpt-5');
 
 export interface MarketSnapshot { 
   probability: number; 
@@ -43,11 +47,9 @@ const RelevanceSchema = z.object({
 async function analyzeTopicRelevance(evidence: Evidence[], question: string): Promise<string[]> {
   if (evidence.length === 0) return [];
   
-  const model = openai('gpt-5');
-  
   try {
     const { object } = await generateObject({
-      model,
+      model: getModel(),
       schema: RelevanceSchema,
       system: `You are a relevance analyzer. Determine if evidence items are directly relevant to the prediction question.
 
