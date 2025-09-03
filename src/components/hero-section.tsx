@@ -157,14 +157,14 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks, 
                       type="submit"
                       size="lg"
                       disabled={isAnalyzing || isTransitioning}
-                      className="h-24 md:h-14 w-full bg-black text-white hover:bg-black/90 transition-all font-medium"
+                      className="h-12 md:h-14 w-full bg-black text-white hover:bg-black/90 transition-all font-medium"
                     >
                       {isAnalyzing || isTransitioning ? (
                         <span className="flex items-center gap-2">
                           <Sparkles className="h-4 w-4 animate-pulse" />
                         </span>
                       ) : (
-                        <ArrowRight className="h-8 w-8" />
+                        <ArrowRight className="h-5 w-5 md:h-6 md:w-6" />
                       )}
                     </Button>
                   </motion.div>
