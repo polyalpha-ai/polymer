@@ -35,7 +35,7 @@ export async function GET() {
       .eq('is_active', true)
       .order('sort_order', { ascending: true })
       .order('volume', { ascending: false })
-      .limit(6);
+      .limit(4); // Reduced to 4 for better mobile experience
 
     if (error) {
       console.error('[API] Database error:', error);

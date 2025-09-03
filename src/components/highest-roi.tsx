@@ -11,12 +11,12 @@ interface MarketCardProps {
   onAnalyze: (url: string) => void;
 }
 
-// Fallback markets for development mode
+// Fallback markets for development mode (only 4 for mobile)
 const fallbackMarkets: FeaturedMarket[] = [
   {
     id: 1,
     slug: "bitcoin-150k-2025",
-    question: "Will Bitcoin reach $150,000 by December 31, 2025?",
+    question: "Will Bitcoin reach $150,000 by 2025?",
     category: null,
     polymarket_url: "https://polymarket.com/event/bitcoin-150k-2025",
     volume: 4320000,
@@ -42,7 +42,7 @@ const fallbackMarkets: FeaturedMarket[] = [
   {
     id: 3,
     slug: "ethereum-5k-2025",
-    question: "Will Ethereum hit $5,000 by December 31?",
+    question: "Will Ethereum hit $5,000 by 2025?",
     category: null,
     polymarket_url: "https://polymarket.com/event/ethereum-5k-2025",
     volume: 3899000,
@@ -62,32 +62,6 @@ const fallbackMarkets: FeaturedMarket[] = [
     end_date: "2025-12-31T23:59:59Z",
     current_odds: { yes: 0.42, no: 0.58 },
     sort_order: 3,
-    is_active: true,
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: 5,
-    slug: "climate-target-2025",
-    question: "Will global climate targets be met in 2025?",
-    category: null,
-    polymarket_url: "https://polymarket.com/event/climate-target-2025",
-    volume: 1800000,
-    end_date: "2025-12-31T23:59:59Z",
-    current_odds: { yes: 0.15, no: 0.85 },
-    sort_order: 4,
-    is_active: true,
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: 6,
-    slug: "space-mission-2025",
-    question: "Will humans land on Mars by 2025?",
-    category: null,
-    polymarket_url: "https://polymarket.com/event/space-mission-2025",
-    volume: 3200000,
-    end_date: "2025-12-31T23:59:59Z",
-    current_odds: { yes: 0.05, no: 0.95 },
-    sort_order: 5,
     is_active: true,
     updated_at: new Date().toISOString()
   }
@@ -138,7 +112,7 @@ function MarketCard({ market, onAnalyze }: MarketCardProps) {
 
   return (
     <div 
-      className="w-[280px] md:w-[300px] h-[160px] md:h-[180px] bg-white/20 backdrop-blur-sm rounded-2xl p-3 md:p-4 flex flex-col justify-between hover:bg-white/30 transition-all cursor-pointer border border-white/30 shadow-xl hover:shadow-2xl hover:border-white/40 group"
+      className="w-[240px] md:w-[300px] h-[140px] md:h-[180px] bg-white/20 backdrop-blur-sm rounded-xl md:rounded-2xl p-2.5 md:p-4 flex flex-col justify-between hover:bg-white/30 transition-all cursor-pointer border border-white/30 shadow-xl hover:shadow-2xl hover:border-white/40 group"
       onClick={handleClick}
     >
       <div className="flex flex-col h-full justify-between">
