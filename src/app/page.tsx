@@ -103,6 +103,8 @@ export default function Home() {
           onAnalyze={handleAnalyze}
           isAnalyzing={isAnalyzing}
           onShowHowItWorks={() => setHowItWorksModalOpen(true)}
+          polymarketUrl={polymarketUrl}
+          setPolymarketUrl={setPolymarketUrl}
         />
         
         {showResult && (
@@ -113,7 +115,13 @@ export default function Home() {
           />
         )}
         
-        <HighestROI />
+        <HighestROI onAnalyze={(url) => {
+          setPolymarketUrl(url);
+          // Small delay to let URL populate, then submit
+          setTimeout(() => {
+            handleAnalyze(url);
+          }, 100);
+        }} />
         
         <MonetizationStrip />
       </motion.div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,13 +13,28 @@ interface HeroSectionProps {
   onAnalyze: (url: string) => void;
   isAnalyzing: boolean;
   onShowHowItWorks: () => void;
+  polymarketUrl?: string; // Add prop for URL population
+  setPolymarketUrl?: (url: string) => void; // Add prop for URL setting
 }
 
-export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }: HeroSectionProps) {
+export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks, polymarketUrl, setPolymarketUrl }: HeroSectionProps) {
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const router = useRouter();
+
+  // Sync with external URL prop
+  useEffect(() => {
+    if (polymarketUrl && polymarketUrl !== url) {
+      setUrl(polymarketUrl);
+    }
+  }, [polymarketUrl]);
+
+  const handleUrlChange = (newUrl: string) => {
+    setUrl(newUrl);
+    setPolymarketUrl?.(newUrl);
+    setError("");
+  };
 
   const validatePolymarketUrl = (url: string) => {
     const polymarketRegex = /^https?:\/\/(www\.)?polymarket\.com\/.+/i;
@@ -111,12 +126,9 @@ export default function HeroSection({ onAnalyze, isAnalyzing, onShowHowItWorks }
               >
                 <Input
                   type="url"
-                  placeholder="Paste Polymarket URL..."
+                  placeholder="Paste Polymarket URL... Or click one of the trending markets below 👇"
                   value={url}
-                  onChange={(e) => {
-                    setUrl(e.target.value);
-                    setError("");
-                  }}
+                  onChange={(e) => handleUrlChange(e.target.value)}
                   className={`h-12 md:h-14 text-base px-4 md:px-6 bg-white/95 backdrop-blur-sm border-white/20 focus:bg-white focus:border-white/40 placeholder:text-neutral-500 w-full ${
                     error ? "border-red-500 animate-shake" : ""
                   }`}
