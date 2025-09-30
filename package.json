@@ -12,7 +12,8 @@
     "debug:drivers": "tsx scripts/debug-drivers.ts",
     "test:valyu": "tsx scripts/test-valyu-search.ts",
     "test:valyu:simple": "tsx scripts/test-valyu-simple.ts",
-    "test:voice": "tsx scripts/test-voice-call.ts"
+    "test:voice": "tsx scripts/test-voice-call.ts",
+    "test:kalshi": "tsx scripts/test-kalshi-integration.ts"
   },
   "dependencies": {
     "@ai-sdk/groq": "^2.0.16",

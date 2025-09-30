@@ -35,7 +35,7 @@ interface AnalysisStep {
 }
 
 const STEP_CONFIG: Record<string, { name: string; description: string }> = {
-  fetch_initial: { name: 'Data Collection', description: 'Fetching market data from Polymarket' },
+  fetch_initial: { name: 'Data Collection', description: 'Fetching market data' },
   initial_data: { name: 'Market Analysis', description: 'Analyzing market fundamentals' },
   optimize_parameters: { name: 'Parameter Optimization', description: 'Optimizing analysis parameters' },
   parameters_optimized: { name: 'Configuration Complete', description: 'Analysis configuration optimized' },
@@ -73,9 +73,26 @@ function AnalysisContent() {
   // Determine if this is a historical view
   const isHistoricalView = !!historyId;
 
-  const extractPolymarketSlug = useCallback((url: string) => {
-    const match = url.match(/polymarket\.com\/event\/([^/?]+)/);
-    return match ? match[1] : null;
+  const extractIdentifier = useCallback((url: string) => {
+    // Try Polymarket first
+    const polymarketMatch = url.match(/polymarket\.com\/event\/([^/?]+)/);
+    if (polymarketMatch) return polymarketMatch[1];
+
+    // Try Kalshi full path (with ticker)
+    const kalshiFullMatch = url.match(/kalshi\.com\/markets\/[^/]+\/[^/]+\/([A-Z0-9-]+)/i);
+    if (kalshiFullMatch) return kalshiFullMatch[1];
+
+    // Try Kalshi series path
+    const kalshiSeriesMatch = url.match(/kalshi\.com\/markets\/([a-z0-9-]+)/i);
+    if (kalshiSeriesMatch) return kalshiSeriesMatch[1];
+
+    return null;
+  }, []);
+
+  const detectPlatform = useCallback((url: string) => {
+    if (url.includes('polymarket.com')) return 'Polymarket';
+    if (url.includes('kalshi.com')) return 'Kalshi';
+    return 'Unknown';
   }, []);
 
   const formatSlugTitle = useCallback((slug?: string | null) => {
@@ -149,18 +166,21 @@ function AnalysisContent() {
   const startAnalysis = useCallback(() => {
     if (!url) return;
 
-    const slug = extractPolymarketSlug(url);
-    if (!slug) {
-      setError('Invalid Polymarket URL');
+    const identifier = extractIdentifier(url);
+    const platform = detectPlatform(url);
+
+    if (!identifier) {
+      setError(`Invalid ${platform} URL`);
       return;
     }
 
     // Track URL entered event
     if (typeof window !== 'undefined') {
       import('@vercel/analytics').then(({ track }) => {
-        track('Analysis Started', { 
+        track('Analysis Started', {
           url: url,
-          slug: slug,
+          identifier: identifier,
+          platform: platform,
           userType: user ? 'authenticated' : 'anonymous',
           tier: user?.subscription_tier || 'anonymous'
         });
@@ -182,7 +202,7 @@ function AnalysisContent() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        polymarketSlug: slug,
+        marketUrl: url,
       }),
     })
     .then(async response => {
@@ -255,7 +275,7 @@ function AnalysisContent() {
       console.error('Analysis failed:', err);
       setError(err.message || 'Analysis failed');
     });
-  }, [url, extractPolymarketSlug]);
+  }, [url, extractIdentifier, detectPlatform, user]);
 
   const handleProgressEvent = useCallback((event: ProgressEvent) => {
     console.log('Progress event:', event);
@@ -286,9 +306,10 @@ function AnalysisContent() {
       // Track report completion event
       if (typeof window !== 'undefined' && event.forecast) {
         import('@vercel/analytics').then(({ track }) => {
-          track('Report Completed', { 
+          track('Report Completed', {
             url: url,
-            slug: extractPolymarketSlug(url || ''),
+            identifier: extractIdentifier(url || ''),
+            platform: detectPlatform(url || ''),
             userType: user ? 'authenticated' : 'anonymous',
             tier: user?.subscription_tier || 'anonymous',
             probability: event.forecast?.pNeutral || 0.5,
@@ -344,12 +365,19 @@ function AnalysisContent() {
     }
   }, []);
 
-  const openPolymarketBet = useCallback(() => {
+  const openMarketBet = useCallback(() => {
     const targetUrl = isHistoricalView ? historicalAnalysis?.market_url : url;
     if (targetUrl) {
       window.open(targetUrl, '_blank');
     }
   }, [url, isHistoricalView, historicalAnalysis]);
+
+  const getPlatformFromUrl = useCallback((url?: string | null) => {
+    if (!url) return 'Unknown';
+    if (url.includes('polymarket.com')) return 'Polymarket';
+    if (url.includes('kalshi.com')) return 'Kalshi';
+    return 'Unknown';
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -853,11 +881,11 @@ function AnalysisContent() {
                             <div>
                               {(['initial_data','complete_data_ready'].includes(step.id)) ? (
                                 <div>
-                                  <CardTitle className="text-white text-lg font-semibold">Polymarket Market</CardTitle>
+                                  <CardTitle className="text-white text-lg font-semibold">{getPlatformFromUrl(url)} Market</CardTitle>
                                   {url && (
                                     <div className="text-white/80 text-sm mt-1">
                                       <a href={url} target="_blank" rel="noopener noreferrer" className="underline inline-flex items-center gap-1">
-                                        {formatSlugTitle(extractPolymarketSlug(url)) || 'View on Polymarket'} <ExternalLink className="w-3 h-3" />
+                                        {formatSlugTitle(extractIdentifier(url)) || `View on ${getPlatformFromUrl(url)}`} <ExternalLink className="w-3 h-3" />
                                       </a>
                                     </div>
                                   )}
@@ -1061,7 +1089,7 @@ function AnalysisContent() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 text-white/80 underline hover:text-white"
                       >
-                        View on Polymarket <ExternalLink className="w-4 h-4" />
+                        View on {getPlatformFromUrl(url)} <ExternalLink className="w-4 h-4" />
                       </a>
                     </div>
                   )}
@@ -1123,18 +1151,29 @@ function AnalysisContent() {
                         </p>
                       </div>
                       
-                      <Button 
-                        onClick={openPolymarketBet}
+                      <Button
+                        onClick={openMarketBet}
                         className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
                         size="lg"
                       >
-                        <Image
-                          src="/polymarket.png"
-                          alt="Polymarket"
-                          width={20}
-                          height={20}
-                          className="rounded"
-                        />
+                        {getPlatformFromUrl(url) === 'Polymarket' && (
+                          <Image
+                            src="/polymarket.png"
+                            alt="Polymarket"
+                            width={20}
+                            height={20}
+                            className="rounded"
+                          />
+                        )}
+                        {getPlatformFromUrl(url) === 'Kalshi' && (
+                          <Image
+                            src="/kalshi.png"
+                            alt="Kalshi"
+                            width={20}
+                            height={20}
+                            className="rounded"
+                          />
+                        )}
                         Place Bet
                         <ExternalLink className="w-4 h-4" />
                       </Button>

@@ -17,7 +17,7 @@ import { useRouter } from "next/navigation";
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [contentVisible, setContentVisible] = useState(false);
-  const [polymarketUrl, setPolymarketUrl] = useState("");
+  const [marketUrl, setMarketUrl] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [resultData, setResultData] = useState<any>(null);
@@ -99,14 +99,14 @@ export default function Home() {
         animate={{ opacity: contentVisible ? 1 : 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
-        <HeroSection 
+        <HeroSection
           onAnalyze={handleAnalyze}
           isAnalyzing={isAnalyzing}
           onShowHowItWorks={() => setHowItWorksModalOpen(true)}
-          polymarketUrl={polymarketUrl}
-          setPolymarketUrl={setPolymarketUrl}
+          polymarketUrl={marketUrl}
+          setPolymarketUrl={setMarketUrl}
         />
-        
+
         {showResult && (
           <ResultPanel
             data={resultData}
@@ -114,9 +114,9 @@ export default function Home() {
             onShare={() => setShareModalOpen(true)}
           />
         )}
-        
+
         <HighestROI onAnalyze={(url) => {
-          setPolymarketUrl(url);
+          setMarketUrl(url);
           // Small delay to let URL populate, then submit
           setTimeout(() => {
             handleAnalyze(url);

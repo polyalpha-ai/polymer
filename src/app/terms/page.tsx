@@ -60,16 +60,16 @@ export default function TermsOfService() {
               </h2>
               
               <p className="leading-relaxed text-neutral-700 dark:text-neutral-300">
-                Polyseer is an AI-powered research platform that provides analysis reports and probabilistic assessments 
-                related to prediction markets, primarily focusing on Polymarket events. Our Service uses artificial 
-                intelligence, machine learning algorithms, and various data sources to generate analysis reports.
+                Polyseer is an AI-powered research platform that provides deep analysis reports and probabilistic assessments
+                for prediction markets, including Polymarket and Kalshi. Our Service uses artificial
+                intelligence, machine learning algorithms, and various data sources to generate comprehensive research analysis.
               </p>
-              
+
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <p className="text-blue-800 dark:text-blue-200 leading-relaxed">
-                  <strong>Important:</strong> Polyseer does not facilitate any betting, wagering, or financial transactions. 
-                  We only provide research analysis and may include links to third-party platforms (such as Polymarket) 
-                  for informational purposes. Any transactions or bets are conducted entirely on third-party platforms 
+                  <strong>Important:</strong> Polyseer does not facilitate any betting, wagering, or financial transactions.
+                  We only provide research analysis and may include links to third-party platforms (such as Polymarket and Kalshi)
+                  for informational purposes. Any transactions or bets are conducted entirely on third-party platforms
                   and are subject to their own terms and regulations.
                 </p>
               </div>
@@ -111,10 +111,10 @@ export default function TermsOfService() {
                   2.2 Third-Party Platform Links
                 </h3>
                 <p className="leading-relaxed text-neutral-700 dark:text-neutral-300">
-                  Our Service may include links to third-party prediction market platforms such as Polymarket. 
-                  We are not affiliated with, endorsed by, or responsible for these third-party platforms. 
-                  Any use of third-party platforms is subject to their own terms of service, privacy policies, 
-                  and applicable regulations. We do not facilitate, process, or have any involvement in any 
+                  Our Service may include links to third-party prediction market platforms such as Polymarket and Kalshi.
+                  We are not affiliated with, endorsed by, or responsible for these third-party platforms.
+                  Any use of third-party platforms is subject to their own terms of service, privacy policies,
+                  and applicable regulations. We do not facilitate, process, or have any involvement in any
                   transactions conducted on third-party platforms.
                 </p>
               </div>

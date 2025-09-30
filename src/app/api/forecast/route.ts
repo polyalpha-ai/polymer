@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runPolymarketForecastPipeline } from '@/lib/agents/orchestrator';
+import { runPolymarketForecastPipeline, runUnifiedForecastPipeline } from '@/lib/agents/orchestrator';
 import { createClient } from '@/utils/supabase/server';
 import { checkUsageLimit, decrementAnalysisCount, setAnalysisContext, clearAnalysisContext } from '@/lib/usage-tracking';
 import { createAnalysisSession, completeAnalysisSession, failAnalysisSession } from '@/lib/analysis-session';
 import { setLLMContext, clearLLMContext } from '@/lib/polar-llm-strategy';
 import { canAnonymousUserQuery, incrementAnonymousUsage } from '@/lib/anonymous-usage';
+import { parseMarketUrl, isValidMarketUrl } from '@/lib/tools/market-url-parser';
 
 export const maxDuration = 800;
 
@@ -66,18 +67,53 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { 
-      polymarketSlug,
+    const {
+      polymarketSlug, // Legacy support
+      marketUrl, // New unified support
       drivers = [],
       historyInterval = '1d',
       withBooks = true,
       withTrades = false
     } = body;
 
-    // Validate required polymarketSlug
-    if (!polymarketSlug || typeof polymarketSlug !== 'string') {
+    // Determine which parameter was provided and validate
+    let finalMarketUrl: string;
+    let identifier: string;
+
+    if (marketUrl) {
+      // New unified approach - supports both Polymarket and Kalshi URLs
+      if (typeof marketUrl !== 'string' || !marketUrl) {
+        return NextResponse.json(
+          { error: 'marketUrl must be a non-empty string' },
+          { status: 400 }
+        );
+      }
+
+      if (!isValidMarketUrl(marketUrl)) {
+        const parsed = parseMarketUrl(marketUrl);
+        return NextResponse.json(
+          { error: parsed.error || 'Invalid market URL. Only Polymarket and Kalshi URLs are supported.' },
+          { status: 400 }
+        );
+      }
+
+      finalMarketUrl = marketUrl;
+      const parsed = parseMarketUrl(marketUrl);
+      identifier = parsed.identifier;
+    } else if (polymarketSlug) {
+      // Legacy support - convert Polymarket slug to URL
+      if (typeof polymarketSlug !== 'string' || !polymarketSlug) {
+        return NextResponse.json(
+          { error: 'polymarketSlug must be a non-empty string' },
+          { status: 400 }
+        );
+      }
+
+      finalMarketUrl = `https://polymarket.com/event/${polymarketSlug}`;
+      identifier = polymarketSlug;
+    } else {
       return NextResponse.json(
-        { error: 'polymarketSlug is required and must be a string' },
+        { error: 'Either marketUrl or polymarketSlug is required' },
         { status: 400 }
       );
     }
@@ -85,7 +121,7 @@ export async function POST(req: NextRequest) {
     // Create analysis session (skip for anonymous users)
     let session: any = null;
     if (!isAnonymous && user) {
-      session = await createAnalysisSession(user.id, polymarketSlug);
+      session = await createAnalysisSession(user.id, identifier);
       sessionId = session.id;
       
       // Handle usage tracking based on user type
@@ -150,9 +186,9 @@ export async function POST(req: NextRequest) {
           // Note: LLM token tracking is handled automatically by Polar LLMStrategy
           // when models are wrapped with the strategy in the agent code
 
-          // Run Polymarket-specific forecasting pipeline with progress tracking
-          const forecastCard = await runPolymarketForecastPipeline({
-            polymarketSlug,
+          // Run unified forecasting pipeline with progress tracking (auto-detects platform)
+          const forecastCard = await runUnifiedForecastPipeline({
+            marketUrl: finalMarketUrl,
             drivers,
             historyInterval,
             withBooks,
@@ -239,26 +275,42 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   return NextResponse.json({
-    message: 'Polymarket Multi-Agent Forecasting API',
-    description: 'AI-powered forecasting using GPT-5 agents with Polymarket integration',
-    usage: 'POST with { polymarketSlug: string, drivers?: string[], historyInterval?: string, withBooks?: boolean, withTrades?: boolean }',
+    message: 'Unified Multi-Platform Forecasting API',
+    description: 'AI-powered forecasting using GPT-5 agents - works with Polymarket and Kalshi',
+    usage: 'POST with { marketUrl: string, drivers?: string[], historyInterval?: string, withBooks?: boolean, withTrades?: boolean }',
     parameters: {
-      polymarketSlug: 'Required. Polymarket slug (e.g., "will-trump-win-2024")',
+      marketUrl: 'Required. Full market URL (Polymarket or Kalshi). Platform is auto-detected.',
+      polymarketSlug: 'Deprecated. Use marketUrl instead. Still supported for backward compatibility.',
       drivers: 'Optional. Key factors to focus analysis on. Auto-generated if not provided.',
       historyInterval: 'Optional. Price history granularity ("1h", "4h", "1d", "1w"). Auto-optimized if not provided.',
       withBooks: 'Optional. Include order book data (default: true)',
       withTrades: 'Optional. Include recent trades (default: false)'
+    },
+    supportedPlatforms: {
+      polymarket: {
+        name: 'Polymarket',
+        urlFormat: 'https://polymarket.com/event/{slug}',
+        example: 'https://polymarket.com/event/will-trump-win-2024'
+      },
+      kalshi: {
+        name: 'Kalshi',
+        urlFormat: 'https://kalshi.com/markets/{series}/{category}/{ticker}',
+        example: 'https://kalshi.com/markets/kxtime/times-person-of-the-year/KXTIME-25'
+      }
     },
     autoGeneration: {
       drivers: 'System automatically analyzes the market question and generates relevant drivers using GPT-5',
       historyInterval: 'System selects optimal interval based on market volume, time until close, and volatility'
     },
     examples: {
-      minimal: {
-        polymarketSlug: 'will-ai-achieve-agi-by-2030'
+      polymarket: {
+        marketUrl: 'https://polymarket.com/event/will-ai-achieve-agi-by-2030'
+      },
+      kalshi: {
+        marketUrl: 'https://kalshi.com/markets/kxgovshut/government-shutdown/kxgovshut-25oct01'
       },
       withCustomization: {
-        polymarketSlug: 'will-trump-win-2024',
+        marketUrl: 'https://polymarket.com/event/will-trump-win-2024',
         drivers: ['Polling data', 'Economic indicators', 'Swing states'],
         historyInterval: '4h'
       }

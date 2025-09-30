@@ -18,7 +18,7 @@ npm install
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000), paste any Polymarket URL, and get your analysis. No signup required in development mode.
+Open [localhost:3000](http://localhost:3000), paste any **Polymarket or Kalshi** URL, and get your analysis. No signup required in development mode.
 
 Or, we have a hosted version [here](https://www.polyseer.xyz)
 
@@ -26,7 +26,7 @@ Or, we have a hosted version [here](https://www.polyseer.xyz)
 
 Prediction markets tell you what might happen. Polyseer tells you why.
 
-Drop in any Polymarket URL and get a structured analysis that breaks down the actual factors driving an outcome. Instead of gut feelings or surface-level takes, you get systematic research across academic papers, news, market data, and expert analysis.
+Drop in any **Polymarket or Kalshi** URL and get a structured analysis that breaks down the actual factors driving an outcome. Instead of gut feelings or surface-level takes, you get systematic research across academic papers, news, market data, and expert analysis.
 
 The system uses multiple AI agents to research both sides of a question, then aggregates the evidence using Bayesian probability math. Think of it as having a research team that can read thousands of sources in minutes and give you the key insights.
 
@@ -47,7 +47,12 @@ Polyseer is built on a **multi-agent AI architecture** that orchestrates special
 
 ```mermaid
 graph TD
-    A[User Input: Polymarket URL] --> B[Data Fetcher]
+    A[User Input: Market URL] --> B[Platform Detector]
+    B --> C{Polymarket or Kalshi?}
+    C -->|Polymarket| D[Polymarket API Client]
+    C -->|Kalshi| E[Kalshi API Client]
+    D --> F[Unified Market Data]
+    E --> F
     B --> C[Orchestrator]
     C --> D[Planner Agent]
     D --> E[Research Agents]

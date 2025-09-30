@@ -23,10 +23,10 @@ This directory contains test and demo scripts for the multi-agent forecasting sy
 ## 🚀 Available Scripts
 
 ### `npm run demo:simple`
-**Quick demo with a single Polymarket forecast**
+**Quick demo with a single prediction market forecast**
 
 - Tests the complete pipeline with auto-generated drivers
-- Uses a popular market (AI/AGI prediction)
+- Works with Polymarket or Kalshi markets
 - Shows forecast results and top evidence
 - Perfect for first-time testing
 
@@ -41,10 +41,17 @@ This directory contains test and demo scripts for the multi-agent forecasting sy
 ### `npm run test:forecast`
 **Comprehensive test suite**
 
-- Tests multiple market types (AI, politics, crypto)
-- Tests both Polymarket and general forecasting
+- Tests multiple market types (AI, politics, crypto, sports)
+- Tests both Polymarket and Kalshi platforms
 - Includes system health checks
 - Shows performance metrics and error handling
+
+### `npm run test:kalshi`
+**Kalshi integration test**
+
+- Tests Kalshi API connectivity
+- Validates URL parsing for both platforms
+- Tests event-level and market-level fetching
 
 **Test categories:**
 - System Health Check
@@ -56,29 +63,41 @@ This directory contains test and demo scripts for the multi-agent forecasting sy
 
 ### Change the Market in Simple Demo
 
-Edit `scripts/demo-simple.ts`:
+Edit `scripts/demo-simple.ts` to use either platform:
+
+**Polymarket:**
 ```typescript
-const result = await runPolymarketForecastPipeline({
-  polymarketSlug: 'your-market-slug-here', // Change this
-  searchFn: valyuWebSearchAdapter,
+const result = await runUnifiedForecastPipeline({
+  marketUrl: 'https://polymarket.com/event/your-market-slug',
 });
 ```
 
-### Popular Market Slugs to Try (2025)
+**Kalshi:**
+```typescript
+const result = await runUnifiedForecastPipeline({
+  marketUrl: 'https://kalshi.com/markets/kxfeddecision/fed-meeting/KXFEDDEC-25DEC18',
+});
+```
 
-- `will-ai-achieve-agi-by-2030` - AI/Technology
-- `bitcoin-200k-by-2030` - Cryptocurrency
-- `fusion-power-commercial-by-2035` - Energy/Technology
-- `will-spacex-land-on-mars-by-2030` - Space/Technology
+### Popular Markets to Try (2025)
+
+**Polymarket:**
+- `https://polymarket.com/event/will-ai-achieve-agi-by-2030` - AI/Technology
+- `https://polymarket.com/event/bitcoin-200k-by-2030` - Cryptocurrency
+- `https://polymarket.com/event/will-trump-win-2024` - Politics
+
+**Kalshi:**
+- `https://kalshi.com/markets/kxfeddecision/fed-meeting` - Fed Rate Decisions
+- `https://kalshi.com/markets/kxratecutcount/number-of-rate-cuts` - Economic Policy
+- `https://kalshi.com/markets/kxmlb/world-series` - Sports
 
 ### Add Custom Drivers
 
 ```typescript
-const result = await runPolymarketForecastPipeline({
-  polymarketSlug: 'your-market',
+const result = await runUnifiedForecastPipeline({
+  marketUrl: 'https://polymarket.com/event/your-market',
   drivers: ['Custom factor 1', 'Custom factor 2'], // Override auto-generation
   historyInterval: '4h', // Override auto-optimization
-  searchFn: valyuWebSearchAdapter,
 });
 ```
 
@@ -94,9 +113,11 @@ const result = await runPolymarketForecastPipeline({
 - Check internet connection
 - Verify Valyu search service is accessible
 
-**"Invalid Polymarket slug"**
-- Use a valid, active market slug
-- Check the market exists on polymarket.com
+**"Market not found"**
+- Use a valid, active market URL
+- For Polymarket: Check the market exists on polymarket.com
+- For Kalshi: Check the market is still active on kalshi.com
+- Kalshi markets may close quickly (especially sports)
 
 **TypeScript errors**
 - Run `npm run build` to check for compilation issues

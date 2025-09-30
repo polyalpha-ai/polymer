@@ -20,15 +20,15 @@ export default function ShareModal({ open, onOpenChange, marketTitle, verdict, c
   const [activeTab, setActiveTab] = useState("x");
 
   const shareUrl = `https://polyseer.ai?via=share&r=${Math.random().toString(36).substr(2, 9)}`;
-  
-  const xText = `I ran this Polymarket through Polyseer. Verdict: ${verdict === "YES" ? "✅" : "❌"} ${verdict} (${confidence}% confidence).
 
-Analyst-grade report + sources in 5s. Try it: ${shareUrl}`;
+  const xText = `I ran this prediction market through Polyseer. Verdict: ${verdict === "YES" ? "✅" : "❌"} ${verdict} (${confidence}% confidence).
+
+AI-powered deep research + analyst-grade report in 5s. Try it: ${shareUrl}`;
 
   const redditTitle = `AI verdict on "${marketTitle}": ${verdict === "YES" ? "✅" : "❌"} ${verdict} (report inside)`;
-  const redditBody = `Just analyzed this market on Polyseer and got a ${confidence}% confidence ${verdict} verdict. 
+  const redditBody = `Just analyzed this prediction market on Polyseer and got a ${confidence}% confidence ${verdict} verdict.
 
-The AI analyzed 40+ sources and provided a detailed breakdown with citations. Pretty interesting analysis.
+The AI analyzed 40+ sources and provided a detailed breakdown with citations. Works with Polymarket and Kalshi.
 
 Check it out: ${shareUrl}`;
 
@@ -44,7 +44,7 @@ Check it out: ${shareUrl}`;
   };
 
   const handleShareReddit = () => {
-    const redditUrl = `https://www.reddit.com/r/Polymarket/submit?title=${encodeURIComponent(redditTitle)}&text=${encodeURIComponent(redditBody)}`;
+    const redditUrl = `https://www.reddit.com/submit?title=${encodeURIComponent(redditTitle)}&text=${encodeURIComponent(redditBody)}`;
     window.open(redditUrl, "_blank");
   };
 
