@@ -4,6 +4,9 @@
 
 **⚠️ NOT FINANCIAL ADVICE** | Polyseer provides analysis for entertainment and research purposes only. Always DYOR.
 
+want to support this project? buy our token on pump.fun.
+token address is 
+
 ## Tldr;
 
 ```bash
