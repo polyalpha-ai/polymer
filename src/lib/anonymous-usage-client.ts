@@ -1,4 +1,4 @@
-const ANONYMOUS_USAGE_COOKIE = 'polyseer_anonymous_usage'
+const ANONYMOUS_USAGE_COOKIE = 'polymer_anonymous_usage'
 const MAX_ANONYMOUS_QUERIES = 2
 
 interface AnonymousUsage {

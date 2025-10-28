@@ -13,7 +13,7 @@ export default function HowItWorksModal({ open, onOpenChange }: HowItWorksModalP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-xl">How Polyseer Works</DialogTitle>
+          <DialogTitle className="text-xl">How Polymer Works</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">

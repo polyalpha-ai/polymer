@@ -206,8 +206,8 @@ export default function Header() {
           >
             <Link href='/' className='inline-block pt-2'>
               <Image
-                src='/polyseer.svg'
-                alt='Polyseer'
+                src='/polymer.svg'
+                alt='Polymer'
                 width={200}
                 height={80}
                 className='h-24 md:h-24 w-auto drop-shadow-md'

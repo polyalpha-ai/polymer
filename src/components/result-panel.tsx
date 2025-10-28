@@ -19,7 +19,7 @@ export default function ResultPanel({ data, isLoading, onShare }: ResultPanelPro
   const handleCopyTLDR = () => {
     if (!data) return;
     
-    const tldr = `Polyseer verdict on "${data.marketTitle}": ${data.verdict === "YES" ? "✅" : "❌"} ${data.verdict} (${data.confidence}% confidence). ${data.summary}`;
+    const tldr = `Polymer verdict on "${data.marketTitle}": ${data.verdict === "YES" ? "✅" : "❌"} ${data.verdict} (${data.confidence}% confidence). ${data.summary}`;
     navigator.clipboard.writeText(tldr);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -70,7 +70,7 @@ export default function ResultPanel({ data, isLoading, onShare }: ResultPanelPro
             </Badge>
 
             <p className="text-lg text-neutral-700 dark:text-neutral-300">
-              Polyseer thinks <span className="font-bold">{data.verdict}</span> based on {data.summary}
+              Polymer thinks <span className="font-bold">{data.verdict}</span> based on {data.summary}
             </p>
           </div>
 

@@ -34,7 +34,7 @@ export default function TermsOfService() {
                 ⚠️ Important Notice - Not Financial Advice
               </h2>
               <p className="text-amber-800 dark:text-amber-200 leading-relaxed">
-                <strong>Polyseer provides analysis for research and entertainment purposes only.</strong> 
+                <strong>Polymer provides analysis for research and entertainment purposes only.</strong> 
                 Nothing on this platform constitutes professional financial, investment, trading, or legal advice. 
                 All predictions, probabilities, and analyses are educational tools only. 
                 <strong> Always conduct your own research and consult with qualified professionals before making any financial decisions.</strong>
@@ -47,7 +47,7 @@ export default function TermsOfService() {
                 1. Acceptance of Terms
               </h2>
               <p className="leading-relaxed text-neutral-700 dark:text-neutral-300">
-                By accessing or using Polyseer (&ldquo;Service,&rdquo; &ldquo;Platform,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;), you (&ldquo;User,&rdquo; &ldquo;you,&rdquo; or &ldquo;your&rdquo;) 
+                By accessing or using Polymer (&ldquo;Service,&rdquo; &ldquo;Platform,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;), you (&ldquo;User,&rdquo; &ldquo;you,&rdquo; or &ldquo;your&rdquo;) 
                 agree to be bound by these Terms of Service (&ldquo;Terms&rdquo;). If you do not agree to these Terms, 
                 do not use our Service.
               </p>
@@ -60,14 +60,14 @@ export default function TermsOfService() {
               </h2>
               
               <p className="leading-relaxed text-neutral-700 dark:text-neutral-300">
-                Polyseer is an AI-powered research platform that provides deep analysis reports and probabilistic assessments
+                Polymer is an AI-powered research platform that provides deep analysis reports and probabilistic assessments
                 for prediction markets, including Polymarket and Kalshi. Our Service uses artificial
                 intelligence, machine learning algorithms, and various data sources to generate comprehensive research analysis.
               </p>
 
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <p className="text-blue-800 dark:text-blue-200 leading-relaxed">
-                  <strong>Important:</strong> Polyseer does not facilitate any betting, wagering, or financial transactions.
+                  <strong>Important:</strong> Polymer does not facilitate any betting, wagering, or financial transactions.
                   We only provide research analysis and may include links to third-party platforms (such as Polymarket and Kalshi)
                   for informational purposes. Any transactions or bets are conducted entirely on third-party platforms
                   and are subject to their own terms and regulations.
@@ -378,7 +378,7 @@ export default function TermsOfService() {
                     7.2 Limitation of Damages
                   </h3>
                   <p className="leading-relaxed text-neutral-700 dark:text-neutral-300 mb-4">
-                    TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL POLYSEER, ITS AFFILIATES, 
+                    TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL POLYMER, ITS AFFILIATES, 
                     OFFICERS, DIRECTORS, EMPLOYEES, OR AGENTS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, 
                     SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO:
                   </p>
@@ -464,7 +464,7 @@ export default function TermsOfService() {
                       Indemnification
                     </h3>
                     <p className="text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
-                      You agree to indemnify and hold harmless Polyseer from any claims arising from your 
+                      You agree to indemnify and hold harmless Polymer from any claims arising from your 
                       use of the Service or violation of these Terms.
                     </p>
                   </div>
@@ -474,7 +474,7 @@ export default function TermsOfService() {
                       Intellectual Property
                     </h3>
                     <p className="text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
-                      All content and technology remain the property of Polyseer. Users receive a limited 
+                      All content and technology remain the property of Polymer. Users receive a limited 
                       license to use the Service in accordance with these Terms.
                     </p>
                   </div>
@@ -538,7 +538,7 @@ export default function TermsOfService() {
                   </li>
                   <li className="flex items-center">
                     <span className="text-blue-500 mr-3">🌐</span>
-                    <span>Website: <Link href="/" className="text-blue-600 hover:text-blue-700 underline">polyseer.xyz</Link></span>
+                    <span>Website: <Link href="/" className="text-blue-600 hover:text-blue-700 underline">polymer.xyz</Link></span>
                   </li>
                 </ul>
               </div>
@@ -564,7 +564,7 @@ export default function TermsOfService() {
               href="/" 
               className="inline-flex items-center px-6 py-3 bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 rounded-lg hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
             >
-              ← Back to Polyseer
+              ← Back to Polymer
             </Link>
           </div>
         </motion.div>

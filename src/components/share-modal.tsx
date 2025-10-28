@@ -19,14 +19,14 @@ export default function ShareModal({ open, onOpenChange, marketTitle, verdict, c
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState("x");
 
-  const shareUrl = `https://polyseer.ai?via=share&r=${Math.random().toString(36).substr(2, 9)}`;
+  const shareUrl = `https://polymer.ai?via=share&r=${Math.random().toString(36).substr(2, 9)}`;
 
-  const xText = `I ran this prediction market through Polyseer. Verdict: ${verdict === "YES" ? "✅" : "❌"} ${verdict} (${confidence}% confidence).
+  const xText = `I ran this prediction market through Polymer. Verdict: ${verdict === "YES" ? "✅" : "❌"} ${verdict} (${confidence}% confidence).
 
 AI-powered deep research + analyst-grade report in 5s. Try it: ${shareUrl}`;
 
   const redditTitle = `AI verdict on "${marketTitle}": ${verdict === "YES" ? "✅" : "❌"} ${verdict} (report inside)`;
-  const redditBody = `Just analyzed this prediction market on Polyseer and got a ${confidence}% confidence ${verdict} verdict.
+  const redditBody = `Just analyzed this prediction market on Polymer and got a ${confidence}% confidence ${verdict} verdict.
 
 The AI analyzed 40+ sources and provided a detailed breakdown with citations. Works with Polymarket and Kalshi.
 
@@ -131,7 +131,7 @@ Check it out: ${shareUrl}`;
                 Confidence: {confidence}%
               </div>
               <div className="text-sm opacity-80">
-                polyseer.ai
+                polymer.ai
               </div>
             </div>
             <Button onClick={handleExportImage} className="w-full">

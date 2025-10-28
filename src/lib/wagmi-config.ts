@@ -7,8 +7,8 @@ export const wagmiConfig = createConfig({
   connectors: [
     metaMask({
       dappMetadata: {
-        name: 'Polyseer',
-        url: 'https://polyseer.app',
+        name: 'Polymer',
+        url: 'https://polymer.app',
         iconUrl: '/polymarket.png',
       },
     }),

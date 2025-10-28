@@ -14,14 +14,14 @@ export default function TelegramBotModal({ open, onOpenChange }: TelegramBotModa
   const [alertsEnabled, setAlertsEnabled] = useState(true);
 
   const handleOpenTelegram = () => {
-    window.open("https://t.me/PolyseerBot", "_blank");
+    window.open("https://t.me/PolymerBot", "_blank");
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl">Add Polyseer Bot</DialogTitle>
+          <DialogTitle className="text-xl">Add Polymer Bot</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">

@@ -1,8 +1,8 @@
-# Polyseer - See the Future.
+# Polymer - See the Future.
 
-> *Everyone wishes they could go back and buy Bitcoin at $1. Polyseer brings the future to you, so you never have to wonder "what if?" again.*
+> *Everyone wishes they could go back and buy Bitcoin at $1. Polymer brings the future to you, so you never have to wonder "what if?" again.*
 
-**⚠️ NOT FINANCIAL ADVICE** | Polyseer provides analysis for entertainment and research purposes only. Always DYOR.
+**⚠️ NOT FINANCIAL ADVICE** | Polymer provides analysis for entertainment and research purposes only. Always DYOR.
 
 want to support this project? buy our token on pump.fun.
 token address is 
@@ -10,8 +10,8 @@ token address is
 ## Tldr;
 
 ```bash
-git clone https://github.com/yorkeccak/polyseer.git
-cd polyseer
+git clone https://github.com/polyalpha-ai/polymer.git
+cd polymer
 npm install
 
 # Create .env.local with:
@@ -23,11 +23,11 @@ npm run dev
 
 Open [localhost:3000](http://localhost:3000), paste any **Polymarket or Kalshi** URL, and get your analysis. No signup required in development mode.
 
-Or, we have a hosted version [here](https://www.polyseer.xyz)
+Or, we have a hosted version [here](https://www.polymer.xyz)
 
-## What is Polyseer?
+## What is Polymer?
 
-Prediction markets tell you what might happen. Polyseer tells you why.
+Prediction markets tell you what might happen. Polymer tells you why.
 
 Drop in any **Polymarket or Kalshi** URL and get a structured analysis that breaks down the actual factors driving an outcome. Instead of gut feelings or surface-level takes, you get systematic research across academic papers, news, market data, and expert analysis.
 
@@ -46,7 +46,7 @@ Built for developers, researchers, and anyone who wants rigorous analysis instea
 
 ## 🏗️ Architecture Overview
 
-Polyseer is built on a **multi-agent AI architecture** that orchestrates specialized agents to conduct deep analysis. Here's how the magic happens:
+Polymer is built on a **multi-agent AI architecture** that orchestrates specialized agents to conduct deep analysis. Here's how the magic happens:
 
 ```mermaid
 graph TD
@@ -119,7 +119,7 @@ sequenceDiagram
 
 ### Valyu Integration
 
-Polyseer leverages [Valyu's search network](https://valyu.network) to access:
+Polymer leverages [Valyu's search network](https://valyu.network) to access:
 
 - **🎓 Academic Papers**: Real-time research publications
 - **🌐 Web Intelligence**: Fresh news and analysis  
@@ -166,7 +166,7 @@ Each piece of evidence is rigorously classified:
 
 ### Bayesian Probability Aggregation
 
-Polyseer uses sophisticated mathematical models to combine evidence:
+Polymer uses sophisticated mathematical models to combine evidence:
 
 ```mermaid
 graph TD
@@ -245,8 +245,8 @@ Each piece of evidence receives an influence score based on:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/polyseer.git
-cd polyseer
+git clone https://github.com/polyalpha-ai/polymer.git
+cd polymer
 ```
 
 ### 2. Install Dependencies
@@ -358,7 +358,7 @@ CREATE TABLE analysis_sessions (
 
 ### 5. Choose Your Mode
 
-Polyseer supports two deployment modes:
+Polymer supports two deployment modes:
 
 #### 🔧 **Development Mode** (Default)
 Perfect for developers, researchers, and personal use:
@@ -511,7 +511,7 @@ We welcome contributions! Here's how to get started:
 ## ⚖️ Legal & Disclaimers
 
 ### Important Notice
-**⚠️ NOT FINANCIAL ADVICE**: Polyseer provides analysis for entertainment and research purposes only. All predictions are probabilistic and should not be used as the sole basis for financial decisions.
+**⚠️ NOT FINANCIAL ADVICE**: Polymer provides analysis for entertainment and research purposes only. All predictions are probabilistic and should not be used as the sole basis for financial decisions.
 
 ### Terms of Service
 - **🔒 Privacy Policy**: We respect your privacy
@@ -537,16 +537,16 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - **💳 Polar**: Billing and subscriptions
 ---
 
-**Ready to see the future? Start analyzing markets at [polyseer.xyz](https://polyseer.xyz) 🔮**
+**Ready to see the future? Start analyzing markets at [polymer.xyz](https://polymer.xyz) 🔮**
 
 *Remember: The future belongs to those who can see it coming. Don't miss out again.*
 
 ---
 
 <div align="center">
-  <img src="public/polyseer.svg" alt="Polyseer" width="200"/>
-  
+  <img src="public/polymer.svg" alt="Polymer" width="200"/>
+
   **See the Future. Don't Miss Out.**
-  
-  [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fpolyseer%2Fpolyseer)
+
+  [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fpolyalpha-ai%2Fpolymer)
 </div>
