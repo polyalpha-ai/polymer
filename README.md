@@ -1,11 +1,9 @@
-# Polymer - See the Future.
+# Polymer
 
-> *Everyone wishes they could go back and buy Bitcoin at $1. Polymer brings the future to you, so you never have to wonder "what if?" again.*
+**Turning prediction into alpha**
+The AI research layer that explains why markets move—combining probabilistic data, academic evidence, and Bayesian reasoning to uncover real insight.
 
-**⚠️ NOT FINANCIAL ADVICE** | Polymer provides analysis for entertainment and research purposes only. Always DYOR.
-
-want to support this project? buy our token on pump.fun.
-token address is 
+Want to support this project? buy our token on pump.fun token address is 
 
 ## Tldr;
 
@@ -23,7 +21,6 @@ npm run dev
 
 Open [localhost:3000](http://localhost:3000), paste any **Polymarket or Kalshi** URL, and get your analysis. No signup required in development mode.
 
-Or, we have a hosted version [here](https://www.polymer.xyz)
 
 ## What is Polymer?
 
